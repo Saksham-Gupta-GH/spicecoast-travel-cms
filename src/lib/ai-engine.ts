@@ -97,7 +97,10 @@ Rules:
 - Do not include personal identifiers.
 
 Traveller message:
-${redactDirectIdentifiers(message)}`;
+${redactDirectIdentifiers(message)}
+
+Required JSON schema:
+${JSON.stringify(EXTRACTION_SCHEMA)}`;
 }
 
 async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
@@ -136,7 +139,7 @@ async function extractWithGemini(message: string): Promise<ExtractionResult> {
         },
       }),
     },
-    5500
+    12000
   );
   const payload = await response.json() as any;
   const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -166,15 +169,13 @@ async function extractWithOpenRouter(message: string, geminiFailure: string): Pr
         ],
         temperature: 0,
         max_completion_tokens: 700,
-        response_format: {
-          type: "json_schema",
-          json_schema: { name: "travel_enquiry_extraction", strict: true, schema: EXTRACTION_SCHEMA },
-        },
+        response_format: { type: "json_object" },
       }),
     },
-    4500
+    8000
   );
   const payload = await response.json() as any;
+  if (payload?.error?.message) throw new Error(`OpenRouter: ${String(payload.error.message).slice(0, 180)}`);
   const content = payload?.choices?.[0]?.message?.content;
   const text = typeof content === "string" ? content : content?.find?.((part: any) => part?.type === "text")?.text;
   if (typeof text !== "string") throw new Error("OpenRouter returned no structured completion");
