@@ -15,11 +15,13 @@ A full-stack take-home build for Company A, Kochi: server-rendered package pages
 
 ```bash
 npm install
+cp .env.example .env.local
+# Fill DATABASE_URL and SESSION_SECRET in .env.local
 npm test
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The SQLite database is created and seeded automatically.
+Open [http://localhost:3000](http://localhost:3000). PostgreSQL tables and realistic sample data are created automatically on first use.
 
 Reviewer staff accounts:
 
@@ -37,8 +39,8 @@ npm run lint
 npm run build
 ```
 
-See [deployment.md](./deployment.md) for environment variables, role-specific demo flows and the persistent-disk deployment path. See [Technical_Design_Document.docx](./Technical_Design_Document.docx) for architecture, assumptions, tradeoffs and known limitations.
+See [deployment.md](./deployment.md) for environment variables, role-specific demo flows and the free Vercel + Neon deployment path. See [Technical_Design_Document.docx](./Technical_Design_Document.docx) for architecture, assumptions, tradeoffs and known limitations.
 
 ## Deployment note
 
-The CMS writes to SQLite. Deploy it as one persistent Node.js instance using the included `render.yaml`; a stateless serverless filesystem is not suitable for durable CMS edits. For horizontal production scaling, migrate persistence to managed PostgreSQL.
+The application uses managed PostgreSQL, so CMS edits remain durable across stateless Vercel function invocations. The assessment deployment targets Vercel Hobby and Neon Free; a client launch should use paid capacity, backups and monitoring.

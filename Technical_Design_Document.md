@@ -2,7 +2,7 @@
 ## Tour Operator Public Portal Package CMS and AI Enquiry Engine
 **Candidate:** Saksham Gupta  
 **Project GitHub Repository:** [https://github.com/Saksham-Gupta-GH/spicecoast-travel-cms](https://github.com/Saksham-Gupta-GH/spicecoast-travel-cms)
-**Live Application:** Add the deployed Render URL here before submission
+**Live Application:** Add the deployed Vercel URL here before submission
 **Problem Statement:** Brief 1 — Tour operator's website with custom CMS for packages, blogs, enquiries, and AI triage  
 **Client Profile:** Company A, Kochi, Kerala (48 staff, ₹28–34 Cr revenue, 4,300 annual bookings across 60 packages)  
 
@@ -19,7 +19,7 @@ Company A sells bespoke Kerala and South India holidays to families, honeymooner
 **Total Financial Leakage Addressed:** **₹66.82 Lakh / Year**.
 
 ### The Solution Delivered
-A unified, server-rendered Next.js 16 application backed by a zero-overhead local SQLite database (`better-sqlite3`) that provides:
+A unified, server-rendered Next.js 16 application backed by managed PostgreSQL that provides:
 * **Public Booking Portal:** High-impact Kerala visual branding, day-wise itineraries, seasonal tariff matrix (twin sharing + assumed 5% GST), and explicit digital follow-up consent.
 * **5-Minute Package CMS Studio:** In-place seasonal tariff edits, 1-click package duplication, live preview, and snapshot-based version history with 1-click rollback.
 * **Unified Admin Inbox & AI Triage Studio:** Multi-channel aggregation, automatic parameter extraction, top-3 package recommendation, and automated draft replies strictly constrained to database prices (eliminating hallucinations).
@@ -74,7 +74,7 @@ Every item below is an implementation assumption rather than a fact supplied by 
 +---------------------------------------------------------------------------------+
                                       |
 +---------------------------------------------------------------------------------+
-|                         PERSISTENCE: SQLITE (WAL MODE)                          |
+|                    PERSISTENCE: MANAGED POSTGRESQL (NEON)                      |
 |   * packages               * seasonal_prices       * package_versions           |
 |   * enquiries              * quotes                * blogs                      |
 |   * activity_logs          * users                 * redirects (sample mappings)|
@@ -86,10 +86,13 @@ Every item below is an implementation assumption rather than a fact supplied by 
 2. **Unified Full-Stack Deployment:** Eliminates the operational overhead of running separate frontend and backend microservices. Reviewers need only one command (`npm run dev`) to test the entire system.
 3. **Optimized Turbopack Bundling:** Instant compilation and type checking with zero external bundle bloat.
 
-### Why SQLite with better sqlite3 and WAL Mode
-* **Zero Configuration for Evaluators:** Avoids external PostgreSQL/MySQL cloud provisioning, Docker daemon requirements, or connection string misconfigurations.
-* **High Performance:** Running SQLite in Write-Ahead Logging (`WAL`) mode supports concurrent readers alongside atomic local transactions.
-* **Relational Integrity:** Foreign keys with `ON DELETE CASCADE` ensure seasonal prices, itineraries, and version snapshots remain strictly synchronized.
+### Why Managed PostgreSQL on Neon
+* **Durable Serverless Writes:** Vercel function filesystems are ephemeral. PostgreSQL keeps package edits, versions and enquiries durable across cold starts and deployments.
+* **Free Assessment Deployment:** Neon Free and Vercel Hobby support a public non-commercial evaluation without a paid persistent disk. The client production rollout would use paid capacity, backups and monitoring.
+* **Relational Integrity and Scale:** Foreign keys with `ON DELETE CASCADE` keep seasonal prices, itineraries and version snapshots synchronized while allowing multiple stateless application instances.
+
+### Why Vercel for the Assessment Deployment
+Vercel is the verified Next.js adapter path and supports the App Router, Server Components, route handlers and proxy used in this build. The application does not rely on Vercel's filesystem for durable state. This is an assessment deployment choice, not an assumption that a free tier is appropriate for Company A's production traffic.
 
 ---
 
@@ -144,7 +147,7 @@ Every item below is an implementation assumption rather than a fact supplied by 
 * **`package_versions`**: Stores deep JSON snapshots of past revisions, author metadata, and change notes to support 1-click rollbacks.
 * **`enquiries`**: Unified lead store supporting Web, WhatsApp, and Email. Houses both raw incoming text and extracted AI attributes.
 * **`quotes`**: Itemized proposals with subtotal, 5% GST calculation, and validity period.
-* **`activity_logs`**: Append-only application audit trail of package edits, pricing changes, and simulated reply dispatches. Database administrators can still alter SQLite directly, so “tamper-proof” is not claimed.
+* **`activity_logs`**: Append-only application audit trail of package edits, pricing changes, and simulated reply dispatches. Database administrators can still alter PostgreSQL records, so “tamper-proof” is not claimed.
 * **`redirects`**: Schema for legacy mappings plus eight representative proxy redirects. The production migration requires the client’s complete 140-URL export.
 
 ---
@@ -234,9 +237,9 @@ Run via `npm test` using Node's native test runner:
 ### Security and Privacy Safeguards
 * **No Production Secrets in Repository:** No API keys or production credentials are committed. The documented reviewer accounts and shared demo password are intentionally public test data.
 * **DPDP Act 2023 Consent Enforcement:** Explicit opt-in captured before storing lead contact details.
-* **Sanitized Inputs:** All SQLite queries utilize parameterized statements (`db.prepare(...).all(...)`), preventing SQL injection attacks.
+* **Sanitized Inputs:** All PostgreSQL queries use parameter placeholders rather than string interpolation, preventing SQL injection attacks.
 * **Authentication and Access Control:** Staff authenticate through a dedicated sign-in page. The server issues a signed, HTTP-only, same-site session cookie with an eight-hour expiry. Server pages and mutating/read APIs repeat role checks: admins have full access, editors manage packages/blogs, and consultants manage enquiries/quotes.
-* **Server Validation:** Public enquiry payloads enforce name, email, message and length constraints, accepted sources, and explicit consent for digital follow-up. SQLite statements are parameterized.
+* **Server Validation:** Public enquiry payloads enforce name, email, message and length constraints, accepted sources, and explicit consent for digital follow-up. PostgreSQL statements are parameterized.
 
 ---
 
@@ -251,7 +254,8 @@ Run via `npm test` using Node's native test runner:
 6. **Complete 140-URL Migration:** Only representative mappings are included because the legacy URL inventory was not supplied.
 
 ### Known Limitations
-* SQLite is appropriate for this self-contained evaluation and a single persistent Node instance. A multi-instance production rollout should migrate to managed PostgreSQL and shared object storage.
+* The free Vercel and Neon tiers are appropriate for a non-commercial assessment demo, not the stated 2,400-enquiry-per-month production workload. Production needs paid capacity, backups, observability, retention policies and a data-hosting review under the DPDP Act.
+* Database schema creation and sample seeding run automatically at application startup for reviewer convenience. Production should replace this with an explicit, versioned migration pipeline.
 * The deterministic extractor handles the demonstrated English phrasing and common INR expressions, but not arbitrary multilingual or ambiguous messages. Low-confidence fields remain editable and nothing is sent without review.
 * Scheduled package status is stored, but a background publication scheduler is not implemented in the core slice.
 * Remote sample images require network access; production should use an approved media library and image ownership checks.
