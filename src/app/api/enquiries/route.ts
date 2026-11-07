@@ -98,7 +98,7 @@ export async function POST(request: Request) {
       )
     `);
 
-    insert.run({
+    await insert.run({
       id: enquiryId,
       package_id: package_id || (triageResult.suggestedPackages[0]?.id ?? null),
       source,

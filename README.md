@@ -2,6 +2,8 @@
 
 A full-stack take-home build for Company A, Kochi: server-rendered package pages, versioned seasonal pricing, traveller enquiries, and human-reviewed AI triage.
 
+Live demo: [https://spicecoast-travel-cms.vercel.app](https://spicecoast-travel-cms.vercel.app)
+
 ## Core flows
 
 - Public package catalogue and server-rendered package detail pages

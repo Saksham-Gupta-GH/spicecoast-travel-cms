@@ -2,7 +2,7 @@
 ## Tour Operator Public Portal Package CMS and AI Enquiry Engine
 **Candidate:** Saksham Gupta  
 **Project GitHub Repository:** [https://github.com/Saksham-Gupta-GH/spicecoast-travel-cms](https://github.com/Saksham-Gupta-GH/spicecoast-travel-cms)
-**Live Application:** Add the deployed Vercel URL here before submission
+**Live Application:** [https://spicecoast-travel-cms.vercel.app](https://spicecoast-travel-cms.vercel.app)
 **Problem Statement:** Brief 1 — Tour operator's website with custom CMS for packages, blogs, enquiries, and AI triage  
 **Client Profile:** Company A, Kochi, Kerala (48 staff, ₹28–34 Cr revenue, 4,300 annual bookings across 60 packages)  
 
@@ -33,7 +33,7 @@ Every item below is an implementation assumption rather than a fact supplied by 
 * **Working hours and SLA:** The interface demonstrates a one-hour response target but does not calculate business hours because the brief does not define a calendar or holiday policy.
 * **AI:** “AI” is implemented as deterministic local extraction and weighted ranking so the reviewer can run it without credentials. It is not presented as a trained model or external LLM.
 * **External channels:** WhatsApp, email, chat and phone ingestion and message delivery are mocked as required by the core-build instructions. Clicking send records an approved reply and timestamp; it does not contact a traveller.
-* **Legacy URLs:** Eight representative redirects are implemented. The actual list of 140 old URLs was not supplied and must be imported during migration.
+* **Legacy URLs:** Five representative redirects are implemented. The actual list of 140 old URLs was not supplied and must be imported during migration.
 * **Images:** Remote Unsplash images are used as sample editorial assets and are not client-owned production assets.
 
 ---
@@ -54,7 +54,7 @@ Every item below is an implementation assumption rather than a fact supplied by 
 |  [Server Components (SSR)]         [Client Interactive Islands]                |
 |  * /packages/[slug] (Itineraries)  * EnquiryModal (1-Hr SLA + DPDP Consent)     |
 |  * /blog/[slug] (Package links)    * EnquiriesInboxClient (AI Triage Studio)    |
-|  * /quotes/[id] (PDF Proposal)     * PackagesCmsClient (Tariff & Rollback)      |
+|  * /quotes/[id] (Printable Proposal) * PackagesCmsClient (Tariff & Rollback)    |
 +---------------------------------------------------------------------------------+
                                       |
 +---------------------------------------------------------------------------------+
@@ -93,6 +93,8 @@ Every item below is an implementation assumption rather than a fact supplied by 
 
 ### Why Vercel for the Assessment Deployment
 Vercel is the verified Next.js adapter path and supports the App Router, Server Components, route handlers and proxy used in this build. The application does not rely on Vercel's filesystem for durable state. This is an assessment deployment choice, not an assumption that a free tier is appropriate for Company A's production traffic.
+
+Database connections and schema initialization are lazy: route modules can be compiled without opening a connection, while each database-backed request awaits one shared initialization promise before querying. Public catalogue, package, blog, quote and sitemap routes are explicitly dynamic so they are rendered from current PostgreSQL data rather than captured during deployment.
 
 ---
 
@@ -148,7 +150,7 @@ Vercel is the verified Next.js adapter path and supports the App Router, Server 
 * **`enquiries`**: Unified lead store supporting Web, WhatsApp, and Email. Houses both raw incoming text and extracted AI attributes.
 * **`quotes`**: Itemized proposals with subtotal, 5% GST calculation, and validity period.
 * **`activity_logs`**: Append-only application audit trail of package edits, pricing changes, and simulated reply dispatches. Database administrators can still alter PostgreSQL records, so “tamper-proof” is not claimed.
-* **`redirects`**: Schema for legacy mappings plus eight representative proxy redirects. The production migration requires the client’s complete 140-URL export.
+* **`redirects`**: Schema for legacy mappings plus five representative proxy redirects. The production migration requires the client’s complete 140-URL export.
 
 ---
 

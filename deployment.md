@@ -2,6 +2,7 @@
 **Client:** Company A, Kochi  
 **Candidate:** Saksham Gupta  
 **Repository:** https://github.com/Saksham-Gupta-GH/spicecoast-travel-cms
+**Live application:** https://spicecoast-travel-cms.vercel.app
 
 ## 1 Local Setup
 
