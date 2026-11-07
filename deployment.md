@@ -50,12 +50,16 @@ Names only, never production values:
 DATABASE_URL
 SESSION_SECRET
 NEXT_PUBLIC_SITE_URL
+GEMINI_API_KEY
+OPENROUTER_API_KEY
+GEMINI_MODEL
+OPENROUTER_MODEL
 DEMO_ADMIN_PASSWORD
 DEMO_EDITOR_PASSWORD
 DEMO_CONSULTANT_PASSWORD
 ```
 
-`DATABASE_URL` and `SESSION_SECRET` are required. `NEXT_PUBLIC_SITE_URL` should be the production Vercel URL so sitemap entries use the deployed origin. The three demo-password overrides are optional.
+`DATABASE_URL` and `SESSION_SECRET` are required. `NEXT_PUBLIC_SITE_URL` should be the production Vercel URL so sitemap entries use the deployed origin. `GEMINI_API_KEY` and `OPENROUTER_API_KEY` activate the external extraction chain; without either key the deterministic local extractor remains available. The model variables and three demo-password overrides are optional.
 
 ## 4 Free Production Deployment
 
@@ -77,7 +81,7 @@ The free tiers are appropriate for a non-commercial assessment demo and may have
 
 1. Sign in as Admin or Consultant and open `/admin/enquiries`.
 2. Select `ENQ-2026-001`, containing the supplied brief enquiry about two adults, one child, December, ₹1.2 lakh and a required houseboat.
-3. Compare the original message with extracted fields and the three ranked packages.
+3. Compare the original message with extracted fields, provider badge and the three ranked packages. New enquiries try Gemini, then OpenRouter, then the local extractor; direct email addresses and phone numbers are redacted before an external request.
 4. Correct a field and save it. Inspect the reply draft: its seasonal figures come from `seasonal_prices`, not the extraction engine.
 5. Approve the draft. This records the simulated send and audit entry; no external message is transmitted.
 

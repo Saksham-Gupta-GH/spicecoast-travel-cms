@@ -318,9 +318,14 @@ export function EnquiriesInboxClient({ initialEnquiries, packages }: Props) {
                     AI Extracted Fields (Human-in-the-Loop Review)
                   </h3>
                 </div>
-                <span className="text-[11px] bg-emerald-50 text-emerald-800 font-semibold px-2.5 py-0.5 rounded-full border border-emerald-200">
-                  Confidence: {Math.round((currentEnquiry.ai_confidence || 0.94) * 100)}%
-                </span>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <span className="text-[11px] bg-violet-50 text-violet-800 font-semibold px-2.5 py-0.5 rounded-full border border-violet-200" title={currentEnquiry.ai_model || "spicecoast-deterministic-v1"}>
+                    Provider: {currentEnquiry.ai_provider === "gemini" ? "Gemini" : currentEnquiry.ai_provider === "openrouter" ? "OpenRouter" : "Local fallback"}
+                  </span>
+                  <span className="text-[11px] bg-emerald-50 text-emerald-800 font-semibold px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    Confidence: {Math.round((currentEnquiry.ai_confidence || 0.5) * 100)}%
+                  </span>
+                </div>
               </div>
 
               <p className="text-xs text-slate-500">

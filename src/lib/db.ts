@@ -180,6 +180,9 @@ async function initializeDatabase() {
       ai_budget_inr INTEGER,
       ai_special_requests TEXT,
       ai_confidence REAL DEFAULT 0.95,
+      ai_provider TEXT DEFAULT 'local',
+      ai_model TEXT,
+      ai_fallback_reason TEXT,
       is_human_reviewed INTEGER DEFAULT 0,
       human_corrections_json TEXT,
 
@@ -258,6 +261,13 @@ async function initializeDatabase() {
       new_path TEXT NOT NULL,
       status_code INTEGER DEFAULT 301
     );
+  `);
+
+  // Additive migration for deployments created before external AI providers were enabled.
+  await db.exec(`
+    ALTER TABLE enquiries ADD COLUMN IF NOT EXISTS ai_provider TEXT DEFAULT 'local';
+    ALTER TABLE enquiries ADD COLUMN IF NOT EXISTS ai_model TEXT;
+    ALTER TABLE enquiries ADD COLUMN IF NOT EXISTS ai_fallback_reason TEXT;
   `);
 
   await seedInitialData();

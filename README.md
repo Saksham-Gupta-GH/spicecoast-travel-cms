@@ -9,7 +9,7 @@ Live demo: [https://spicecoast-travel-cms.vercel.app](https://spicecoast-travel-
 - Public package catalogue and server-rendered package detail pages
 - Package CMS with seasonal tariffs, preview, duplication, version history and rollback
 - Package enquiry forms with explicit digital follow-up consent
-- Unified staff inbox with deterministic field extraction, ranked package suggestions and editable reply drafts
+- Unified staff inbox with Gemini extraction, OpenRouter and local fallbacks, deterministic package ranking and editable reply drafts
 - Signed staff sessions with admin, editor and consultant authorization
 - Seeded sample content, sitemap, representative legacy redirects and printable quote views
 

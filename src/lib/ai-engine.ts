@@ -26,6 +26,180 @@ export interface AIDraftReplyResult {
   suggestedPackages: PackageSuggestion[];
   draftReply: string;
   acknowledgementTemplate: string;
+  provider: "gemini" | "openrouter" | "local";
+  model: string;
+  fallbackReason: string | null;
+}
+
+interface ExtractionResult {
+  extracted: ExtractedEnquiryData;
+  provider: AIDraftReplyResult["provider"];
+  model: string;
+  fallbackReason: string | null;
+}
+
+const EXTRACTION_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    destination: { type: "string", description: "Requested destinations or broad region." },
+    travelDates: { type: "string", description: "Travel month, dates and/or duration. Do not invent exact dates." },
+    adults: { type: "integer", minimum: 1, maximum: 100 },
+    kids: { type: "integer", minimum: 0, maximum: 50 },
+    budgetInr: { type: ["integer", "null"], minimum: 0, maximum: 100000000 },
+    specialRequests: { type: "string", description: "Must-haves and constraints, or Standard holiday customization." },
+    confidence: { type: "number", minimum: 0, maximum: 1 },
+  },
+  required: ["destination", "travelDates", "adults", "kids", "budgetInr", "specialRequests", "confidence"],
+} as const;
+
+function clampText(value: unknown, fallback: string, maxLength = 500) {
+  return typeof value === "string" && value.trim() ? value.trim().slice(0, maxLength) : fallback;
+}
+
+function validateExtraction(value: unknown): ExtractedEnquiryData {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("AI returned a non-object extraction");
+  const data = value as Record<string, unknown>;
+  if (!Number.isInteger(data.adults) || Number(data.adults) < 1 || Number(data.adults) > 100) throw new Error("Invalid adults count");
+  if (!Number.isInteger(data.kids) || Number(data.kids) < 0 || Number(data.kids) > 50) throw new Error("Invalid kids count");
+  if (data.budgetInr !== null && (!Number.isInteger(data.budgetInr) || Number(data.budgetInr) < 0 || Number(data.budgetInr) > 100000000)) {
+    throw new Error("Invalid INR budget");
+  }
+  if (typeof data.confidence !== "number" || !Number.isFinite(data.confidence)) throw new Error("Invalid confidence");
+
+  return {
+    destination: clampText(data.destination, "Kerala Highlights", 200),
+    travelDates: clampText(data.travelDates, "Upcoming Season", 200),
+    adults: Number(data.adults),
+    kids: Number(data.kids),
+    budgetInr: data.budgetInr === null ? null : Number(data.budgetInr),
+    specialRequests: clampText(data.specialRequests, "Standard holiday customization"),
+    confidence: Math.max(0, Math.min(1, data.confidence)),
+  };
+}
+
+export function redactDirectIdentifiers(message: string) {
+  return message
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]")
+    .replace(/(?:\+?\d[\d\s().-]{7,}\d)/g, "[REDACTED_PHONE]")
+    .slice(0, 3000);
+}
+
+function extractionPrompt(message: string) {
+  return `Extract travel enquiry facts from the message below. Return only schema-compliant JSON.
+
+Rules:
+- Budget must be total INR as an integer; convert lakh/lac and k/thousand. Use null if absent.
+- Keep ambiguous dates or durations as written; never invent exact dates.
+- Adults defaults to 2 only when party size is genuinely unstated. Kids defaults to 0.
+- Put must-haves, accessibility, dietary and accommodation preferences in specialRequests.
+- Confidence must reflect ambiguity: below 0.70 when important facts conflict or are unclear.
+- Do not include personal identifiers.
+
+Traveller message:
+${redactDirectIdentifiers(message)}`;
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...init, signal: controller.signal });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function parseJsonText(text: string) {
+  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  return JSON.parse(cleaned);
+}
+
+async function extractWithGemini(message: string): Promise<ExtractionResult> {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("GEMINI_API_KEY is not configured");
+  const model = process.env.GEMINI_MODEL || "gemini-flash-latest";
+  const response = await fetchWithTimeout(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: extractionPrompt(message) }] }],
+        generationConfig: {
+          temperature: 0,
+          maxOutputTokens: 700,
+          responseMimeType: "application/json",
+          responseJsonSchema: EXTRACTION_SCHEMA,
+        },
+      }),
+    },
+    5500
+  );
+  const payload = await response.json() as any;
+  const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (typeof text !== "string") throw new Error("Gemini returned no structured candidate");
+  return { extracted: validateExtraction(parseJsonText(text)), provider: "gemini", model, fallbackReason: null };
+}
+
+async function extractWithOpenRouter(message: string, geminiFailure: string): Promise<ExtractionResult> {
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!key) throw new Error("OPENROUTER_API_KEY is not configured");
+  const model = process.env.OPENROUTER_MODEL || "openrouter/free";
+  const response = await fetchWithTimeout(
+    "https://openrouter.ai/api/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${key}`,
+        "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "https://spicecoast-travel-cms.vercel.app",
+        "X-Title": "SpiceCoast Travel CMS",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: "You extract travel enquiry facts. Return JSON only and never invent missing facts." },
+          { role: "user", content: extractionPrompt(message) },
+        ],
+        temperature: 0,
+        max_completion_tokens: 700,
+        response_format: {
+          type: "json_schema",
+          json_schema: { name: "travel_enquiry_extraction", strict: true, schema: EXTRACTION_SCHEMA },
+        },
+      }),
+    },
+    4500
+  );
+  const payload = await response.json() as any;
+  const content = payload?.choices?.[0]?.message?.content;
+  const text = typeof content === "string" ? content : content?.find?.((part: any) => part?.type === "text")?.text;
+  if (typeof text !== "string") throw new Error("OpenRouter returned no structured completion");
+  return { extracted: validateExtraction(parseJsonText(text)), provider: "openrouter", model: payload?.model || model, fallbackReason: geminiFailure };
+}
+
+export async function extractEnquiryWithFallback(message: string): Promise<ExtractionResult> {
+  let geminiFailure = "Gemini was unavailable";
+  try {
+    return await extractWithGemini(message);
+  } catch (error) {
+    geminiFailure = error instanceof Error ? error.message : geminiFailure;
+  }
+
+  try {
+    return await extractWithOpenRouter(message, geminiFailure);
+  } catch (error) {
+    const openRouterFailure = error instanceof Error ? error.message : "OpenRouter was unavailable";
+    return {
+      extracted: extractEnquiryLocally(message),
+      provider: "local",
+      model: "spicecoast-deterministic-v1",
+      fallbackReason: `Gemini: ${geminiFailure}; OpenRouter: ${openRouterFailure}`.slice(0, 500),
+    };
+  }
 }
 
 /**
@@ -132,6 +306,15 @@ export function extractEnquiryLocally(message: string): ExtractedEnquiryData {
 
   const specialRequests = requests.length > 0 ? requests.join(" • ") : "Standard holiday customization";
 
+  const evidenceCount = [
+    Boolean(adultMatch || groupMatch || text.includes("couple") || text.includes("honeymoon") || text.includes("solo")),
+    Boolean(kidMatch),
+    budgetInr !== null,
+    travelDates !== "Upcoming Season",
+    destinations.length > 0 || text.includes("kerala"),
+    requests.length > 0,
+  ].filter(Boolean).length;
+
   return {
     destination,
     travelDates,
@@ -139,7 +322,7 @@ export function extractEnquiryLocally(message: string): ExtractedEnquiryData {
     kids,
     budgetInr,
     specialRequests,
-    confidence: 0.94,
+    confidence: Math.min(0.96, 0.58 + evidenceCount * 0.065),
   };
 }
 
@@ -305,8 +488,9 @@ SpiceCoast Holidays, Kochi`;
  * Master AI Triage Pipeline
  */
 export async function triageEnquiry(message: string, travellerName: string, enquiryId: string): Promise<AIDraftReplyResult> {
-  // 1. Perform extraction
-  const extracted = extractEnquiryLocally(message);
+  // 1. Perform privacy-redacted provider extraction with two fallbacks
+  const extraction = await extractEnquiryWithFallback(message);
+  const extracted = extraction.extracted;
 
   // 2. Compute package suggestions
   const suggestedPackages = await getPackageSuggestions(extracted, message);
@@ -322,5 +506,8 @@ export async function triageEnquiry(message: string, travellerName: string, enqu
     suggestedPackages,
     draftReply,
     acknowledgementTemplate,
+    provider: extraction.provider,
+    model: extraction.model,
+    fallbackReason: extraction.fallbackReason,
   };
 }

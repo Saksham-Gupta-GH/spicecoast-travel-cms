@@ -87,13 +87,13 @@ export async function POST(request: Request) {
         id, package_id, source, traveller_name, email, phone, raw_message,
         status, assigned_consultant_id, dpdp_consent_given,
         ai_destination, ai_travel_dates, ai_adults, ai_kids, ai_budget_inr,
-        ai_special_requests, ai_confidence, is_human_reviewed,
+        ai_special_requests, ai_confidence, ai_provider, ai_model, ai_fallback_reason, is_human_reviewed,
         suggested_package_ids_json, ai_draft_reply
       ) VALUES (
         @id, @package_id, @source, @traveller_name, @email, @phone, @raw_message,
         'New', 'usr_consultant', @dpdp_consent_given,
         @ai_destination, @ai_travel_dates, @ai_adults, @ai_kids, @ai_budget_inr,
-        @ai_special_requests, @ai_confidence, 0,
+        @ai_special_requests, @ai_confidence, @ai_provider, @ai_model, @ai_fallback_reason, 0,
         @suggested_package_ids_json, @ai_draft_reply
       )
     `);
@@ -114,6 +114,9 @@ export async function POST(request: Request) {
       ai_budget_inr: triageResult.extracted.budgetInr,
       ai_special_requests: triageResult.extracted.specialRequests,
       ai_confidence: triageResult.extracted.confidence,
+      ai_provider: triageResult.provider,
+      ai_model: triageResult.model,
+      ai_fallback_reason: triageResult.fallbackReason,
       suggested_package_ids_json: JSON.stringify(triageResult.suggestedPackages.map(p => p.id)),
       ai_draft_reply: triageResult.draftReply,
     });
@@ -124,7 +127,7 @@ export async function POST(request: Request) {
       VALUES ('AI Automation', 'ENQUIRY_RECEIVED', 'enquiry', ?, ?)
     `).run(
       enquiryId,
-      `New ${source} enquiry from ${traveller_name}. AI extracted ${triageResult.extracted.destination} (Budget: ₹${triageResult.extracted.budgetInr ? triageResult.extracted.budgetInr.toLocaleString() : 'N/A'}).`
+      `New ${source} enquiry from ${traveller_name}. ${triageResult.provider} (${triageResult.model}) extracted ${triageResult.extracted.destination} (Budget: ₹${triageResult.extracted.budgetInr ? triageResult.extracted.budgetInr.toLocaleString() : 'N/A'}).`
     );
 
     return NextResponse.json({
@@ -132,6 +135,9 @@ export async function POST(request: Request) {
       enquiry_id: enquiryId,
       instant_acknowledgement: triageResult.acknowledgementTemplate,
       extracted: triageResult.extracted,
+      ai_provider: triageResult.provider,
+      ai_model: triageResult.model,
+      fallback_reason: triageResult.fallbackReason,
       suggested_packages: triageResult.suggestedPackages,
       draft_reply: triageResult.draftReply,
     });

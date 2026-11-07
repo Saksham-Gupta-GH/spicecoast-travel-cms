@@ -31,7 +31,7 @@ Every item below is an implementation assumption rather than a fact supplied by 
 * **Catalogue:** Four packages are seeded to demonstrate the 60-package operating model. PKG-KL-07 and PKG-SI-12 preserve the supplied package IDs and prices; other package details, itinerary copy, photos and prices are sample content.
 * **Pricing:** The brief requires prices to state per-person basis, twin sharing and GST but does not specify a GST rate. The demo assumes 5% and labels it throughout.
 * **Working hours and SLA:** The interface demonstrates a one-hour response target but does not calculate business hours because the brief does not define a calendar or holiday policy.
-* **AI:** “AI” is implemented as deterministic local extraction and weighted ranking so the reviewer can run it without credentials. It is not presented as a trained model or external LLM.
+* **AI:** Enquiry extraction uses Gemini first, OpenRouter second and a deterministic local extractor as the credential-free final fallback. Package ranking and all pricing remain deterministic and database-backed.
 * **External channels:** WhatsApp, email, chat and phone ingestion and message delivery are mocked as required by the core-build instructions. Clicking send records an approved reply and timestamp; it does not contact a traveller.
 * **Legacy URLs:** Five representative redirects are implemented. The actual list of 140 old URLs was not supplied and must be imported during migration.
 * **Images:** Remote Unsplash images are used as sample editorial assets and are not client-owned production assets.
@@ -66,9 +66,9 @@ Every item below is an implementation assumption rather than a fact supplied by 
 |                             |                                                   |
 |             +---------------+---------------+                                   |
 |             |  AI TRIAGE & EXTRACTION ENGINE |                                   |
-|             |  * Heuristic Regex NLP Core   |                                   |
-|             |  * Zero-Hallucination Pricing |                                   |
-|             |  * Recommendation Scorer      |                                   |
+|             |  * Gemini -> OpenRouter       |                                   |
+|             |  * Local Extraction Fallback |                                   |
+|             |  * DB Pricing & Ranking       |                                   |
 |             +---------------+---------------+                                   |
 |                             |                                                   |
 +---------------------------------------------------------------------------------+
@@ -156,15 +156,17 @@ Database connections and schema initialization are lazy: route modules can be co
 
 ## 4 AI Triage and Suggestion Engine
 
-### Deterministic and Reviewable Design
-The submitted AI pipeline uses a **deterministic local extraction and ranking engine**. This keeps the demo reproducible, removes API-key and quota failures, and makes every recommendation explainable. A production LLM adapter is future work, not part of the delivered code.
+### Hybrid, Reviewable Design
+The submitted pipeline uses **Gemini structured extraction with OpenRouter and deterministic local fallbacks**. Direct email addresses and phone numbers are redacted before external inference. Every provider response is schema-validated; provider errors, timeouts or invalid JSON fall through safely. Package scoring remains deterministic and prices are always fetched from PostgreSQL, so external model wording cannot create a tariff.
 
 ```
 [Incoming Traveller Lead]
          |
          v
 +-------------------------------------------------------+
-| Step 1: Automated Parameter Extraction                |
+| Step 1: Privacy-Redacted Parameter Extraction         |
+| - Gemini -> OpenRouter -> Local deterministic fallback|
+| - Schema validation and provider/model provenance     |
 | - Party Size: Adults & Kids count                     |
 | - Travel Window: Month / Nights                       |
 | - Target Budget (INR): Converts "1.2 lakh" to 120,000 |
@@ -258,7 +260,7 @@ Run via `npm test` using Node's native test runner:
 ### Known Limitations
 * The free Vercel and Neon tiers are appropriate for a non-commercial assessment demo, not the stated 2,400-enquiry-per-month production workload. Production needs paid capacity, backups, observability, retention policies and a data-hosting review under the DPDP Act.
 * Database schema creation and sample seeding run automatically at application startup for reviewer convenience. Production should replace this with an explicit, versioned migration pipeline.
-* The deterministic extractor handles the demonstrated English phrasing and common INR expressions, but not arbitrary multilingual or ambiguous messages. Low-confidence fields remain editable and nothing is sent without review.
+* External extraction depends on third-party availability and quotas; the local engine preserves the core flow during failures. Direct identifiers are redacted, but a production DPDP review must still assess provider terms, retention, cross-border processing and consent. Low-confidence fields remain editable and nothing is sent without review.
 * Scheduled package status is stored, but a background publication scheduler is not implemented in the core slice.
 * Remote sample images require network access; production should use an approved media library and image ownership checks.
 

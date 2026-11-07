@@ -6,6 +6,7 @@ import {
   getPackageSuggestions,
   generateDraftReply,
   getInstantAcknowledgement,
+  redactDirectIdentifiers,
 } from "../src/lib/ai-engine";
 
 initDatabase();
@@ -39,6 +40,20 @@ describe("1. AI Enquiry Extraction Logic", () => {
 
     assert.equal(extracted.adults, 4, "Should extract 4 adults");
     assert.match(extracted.destination, /Tamil Nadu|Heritage|Madurai/i, "Should detect Southern Heritage circuit");
+  });
+
+  test("Redacts direct identifiers before an external AI request", () => {
+    const redacted = redactDirectIdentifiers("Email me at traveller@example.com or call +91 98765 43210 about Kerala");
+    assert.doesNotMatch(redacted, /traveller@example\.com/);
+    assert.doesNotMatch(redacted, /98765 43210/);
+    assert.match(redacted, /\[REDACTED_EMAIL\]/);
+    assert.match(redacted, /\[REDACTED_PHONE\]/);
+  });
+
+  test("Local fallback lowers confidence when an enquiry is ambiguous", () => {
+    const ambiguous = extractEnquiryLocally("Please suggest a nice holiday somewhere in Kerala");
+    const detailed = extractEnquiryLocally("2 adults and 1 kid, Munnar and Alleppey for 5 nights in December, budget 1.2 lakh, houseboat required");
+    assert.ok(ambiguous.confidence < detailed.confidence);
   });
 });
 
