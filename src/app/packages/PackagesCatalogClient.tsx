@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { PackageCard } from "@/components/PackageCard";
-import { Search, Filter, SlidersHorizontal, MapPin } from "lucide-react";
+import { Search, SlidersHorizontal, MapPin } from "lucide-react";
 
 interface Props {
   initialPackages: any[];

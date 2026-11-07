@@ -1,16 +1,16 @@
-# Technical Design Document (TDD)
-## SpiceCoast Holidays — Tour Operator Public Portal, Package CMS & AI Enquiry Engine
+# SpiceCoast Travel CMS Technical Design Document
+## Tour Operator Public Portal Package CMS and AI Enquiry Engine
 **Candidate:** Saksham Gupta  
-**Project GitHub Repository:** [https://github.com/sakshamgupta/spicecoast-travel-cms](https://github.com/sakshamgupta/spicecoast-travel-cms)  
-**Demo Video / Live Target:** [http://localhost:3000](http://localhost:3000) (Self-contained zero-config deployment)  
+**Project GitHub Repository:** [https://github.com/Saksham-Gupta-GH/spicecoast-travel-cms](https://github.com/Saksham-Gupta-GH/spicecoast-travel-cms)
+**Live Application:** Add the deployed Render URL here before submission
 **Problem Statement:** Brief 1 — Tour operator's website with custom CMS for packages, blogs, enquiries, and AI triage  
 **Client Profile:** Company A, Kochi, Kerala (48 staff, ₹28–34 Cr revenue, 4,300 annual bookings across 60 packages)  
 
 ---
 
-## 1. Executive Summary & Business Objective
+## 1 Executive Summary and Business Objective
 
-### The Core Problem & Financial Math
+### The Core Problem and Financial Math
 Company A sells bespoke Kerala and South India holidays to families, honeymooners, and foreign groups. Their legacy setup caused two severe operational bottlenecks:
 1. **Response Time Lag (Loss: ₹52.42 Lakh/yr):** 2,400 monthly enquiries arrive across fragmented channels (web, WhatsApp, email, phone). 25% (600 enquiries) suffer reply delays exceeding 12 hours, crashing conversion from 15% to 7%. This causes **48 lost bookings per month** at an average package value of ₹65,000 and 14% net margin = **₹4.37 Lakh/month = ₹52.42 Lakh/year**.
 2. **Content Publishing Bottleneck (Loss: ₹14.4 Lakh/yr):** Every package edit or seasonal price update costs ₹3,000 and 3 days of freelancer delay across 40 monthly changes = **₹14.4 Lakh/year**.
@@ -20,14 +20,25 @@ Company A sells bespoke Kerala and South India holidays to families, honeymooner
 
 ### The Solution Delivered
 A unified, server-rendered Next.js 16 application backed by a zero-overhead local SQLite database (`better-sqlite3`) that provides:
-* **Public Booking Portal:** High-impact Kerala visual branding, day-wise itineraries, seasonal tariff matrix (twin sharing + 5% GST), and DPDP Act 2023 compliant enquiry modals.
+* **Public Booking Portal:** High-impact Kerala visual branding, day-wise itineraries, seasonal tariff matrix (twin sharing + assumed 5% GST), and explicit digital follow-up consent.
 * **5-Minute Package CMS Studio:** In-place seasonal tariff edits, 1-click package duplication, live preview, and snapshot-based version history with 1-click rollback.
 * **Unified Admin Inbox & AI Triage Studio:** Multi-channel aggregation, automatic parameter extraction, top-3 package recommendation, and automated draft replies strictly constrained to database prices (eliminating hallucinations).
-* **Instant Branded Quote Builder:** Itemized PDF quote generator with statutory GST calculation and shareable links.
+* **Optional Depth — Branded Quote Builder:** Itemized, printable quote view with GST calculation and shareable links. The browser print dialog provides Save as PDF; the server does not generate or email a PDF.
+
+### Assumptions Used in the Demonstration
+Every item below is an implementation assumption rather than a fact supplied by the client:
+* **Brand:** “SpiceCoast Holidays,” its logo treatment, address, phone numbers, email addresses, staff names and traveller identities are fictional demonstration data.
+* **Catalogue:** Four packages are seeded to demonstrate the 60-package operating model. PKG-KL-07 and PKG-SI-12 preserve the supplied package IDs and prices; other package details, itinerary copy, photos and prices are sample content.
+* **Pricing:** The brief requires prices to state per-person basis, twin sharing and GST but does not specify a GST rate. The demo assumes 5% and labels it throughout.
+* **Working hours and SLA:** The interface demonstrates a one-hour response target but does not calculate business hours because the brief does not define a calendar or holiday policy.
+* **AI:** “AI” is implemented as deterministic local extraction and weighted ranking so the reviewer can run it without credentials. It is not presented as a trained model or external LLM.
+* **External channels:** WhatsApp, email, chat and phone ingestion and message delivery are mocked as required by the core-build instructions. Clicking send records an approved reply and timestamp; it does not contact a traveller.
+* **Legacy URLs:** Eight representative redirects are implemented. The actual list of 140 old URLs was not supplied and must be imported during migration.
+* **Images:** Remote Unsplash images are used as sample editorial assets and are not client-owned production assets.
 
 ---
 
-## 2. System Architecture & Tech Stack Justification
+## 2 System Architecture and Technology Choices
 
 ```
 +---------------------------------------------------------------------------------+
@@ -66,23 +77,23 @@ A unified, server-rendered Next.js 16 application backed by a zero-overhead loca
 |                         PERSISTENCE: SQLITE (WAL MODE)                          |
 |   * packages               * seasonal_prices       * package_versions           |
 |   * enquiries              * quotes                * blogs                      |
-|   * activity_logs          * users                 * redirects (140 Legacy)     |
+|   * activity_logs          * users                 * redirects (sample mappings)|
 +---------------------------------------------------------------------------------+
 ```
 
-### Why Next.js 16 App Router?
+### Why Nextjs 16 App Router
 1. **Server-Side Rendering (SSR) for Search & Core Web Vitals:** Tour packages and destination guides require high SEO visibility and fast first-contentful paint (<2.5s). Server Components render complete HTML with zero clientside database waterfall.
 2. **Unified Full-Stack Deployment:** Eliminates the operational overhead of running separate frontend and backend microservices. Reviewers need only one command (`npm run dev`) to test the entire system.
 3. **Optimized Turbopack Bundling:** Instant compilation and type checking with zero external bundle bloat.
 
-### Why SQLite with `better-sqlite3` and WAL Mode?
+### Why SQLite with better sqlite3 and WAL Mode
 * **Zero Configuration for Evaluators:** Avoids external PostgreSQL/MySQL cloud provisioning, Docker daemon requirements, or connection string misconfigurations.
-* **High Performance:** Running SQLite in Write-Ahead Logging (`WAL`) mode supports concurrent readers alongside atomic transactions, executing queries in <1 millisecond.
+* **High Performance:** Running SQLite in Write-Ahead Logging (`WAL`) mode supports concurrent readers alongside atomic local transactions.
 * **Relational Integrity:** Foreign keys with `ON DELETE CASCADE` ensure seasonal prices, itineraries, and version snapshots remain strictly synchronized.
 
 ---
 
-## 3. Data Model & Entity Relationships
+## 3 Data Model and Entity Relationships
 
 ```
 +------------------+         1:N         +---------------------+
@@ -129,19 +140,19 @@ A unified, server-rendered Next.js 16 application backed by a zero-overhead loca
 
 ### Table Specifications
 * **`packages`**: Stores package identity, destinations JSON array, category (Family, Honeymoon, Luxury, Group), hotel tier descriptions, and current published version.
-* **`seasonal_prices`**: Enforces the statutory requirement of per-person twin-sharing tariffs across Peak (Dec–Jan), Regular, and Monsoon seasons, plus 5% GST.
+* **`seasonal_prices`**: Stores per-person twin-sharing tariffs across Peak, Regular and Monsoon seasons, plus the demo’s assumed 5% GST rate.
 * **`package_versions`**: Stores deep JSON snapshots of past revisions, author metadata, and change notes to support 1-click rollbacks.
 * **`enquiries`**: Unified lead store supporting Web, WhatsApp, and Email. Houses both raw incoming text and extracted AI attributes.
 * **`quotes`**: Itemized proposals with subtotal, 5% GST calculation, and validity period.
-* **`activity_logs`**: Immutable audit trail of package edits, pricing changes, and reply dispatches.
-* **`redirects`**: 301 redirect mapping table honoring the 140 legacy URLs requirement.
+* **`activity_logs`**: Append-only application audit trail of package edits, pricing changes, and simulated reply dispatches. Database administrators can still alter SQLite directly, so “tamper-proof” is not claimed.
+* **`redirects`**: Schema for legacy mappings plus eight representative proxy redirects. The production migration requires the client’s complete 140-URL export.
 
 ---
 
-## 4. The AI Triage & Suggestion Engine
+## 4 AI Triage and Suggestion Engine
 
-### Design Philosophy: Resilient Dual-Engine Strategy
-To accommodate quota limitations and offline evaluation while guaranteeing zero crashes, the AI pipeline is structured with a **deterministic local NLP heuristic engine** as the foundational layer, backed by optional live LLM configuration (`AI_API_KEY` / `TYPEROUTER_API_KEY` / `GEMINI_API_KEY`).
+### Deterministic and Reviewable Design
+The submitted AI pipeline uses a **deterministic local extraction and ranking engine**. This keeps the demo reproducible, removes API-key and quota failures, and makes every recommendation explainable. A production LLM adapter is future work, not part of the delivered code.
 
 ```
 [Incoming Traveller Lead]
@@ -186,11 +197,11 @@ To accommodate quota limitations and offline evaluation while guaranteeing zero 
 ### Safety Constraints Enforced
 1. **Prices Come from Database, Never AI:** In accordance with the problem statement (*"prices in drafts come from the package price table, never from the AI"*), pricing numbers in generated draft replies are strictly queried from `seasonal_prices`.
 2. **Nothing Sent Without Human Review:** AI drafts remain in `Draft` state inside the admin inbox until Mathew Varghese (Consultant) or Jawahar Kurian (Admin) verifies and clicks **"Approve & Send Tailored Reply"**.
-3. **DPDP Act 2023 Compliance:** Every public enquiry form requires explicit opt-in consent for WhatsApp and email communication, logged directly alongside the lead record.
+3. **DPDP Consent Safeguard:** Every public enquiry form requires explicit opt-in consent for digital follow-up, logged alongside the lead record. This is one safeguard, not a claim of complete legal compliance.
 
 ---
 
-## 5. Key UI & Design Decisions (6–8 Screens)
+## 5 Key Interface and Design Decisions
 
 ### Visual Identity
 A tailored design system inspired by Kerala's natural landscapes:
@@ -205,14 +216,14 @@ A tailored design system inspired by Kerala's natural landscapes:
 4. **Package CMS Studio (`/admin/packages`)**: Comprehensive management interface allowing 5-minute price edits, 1-click duplicate package creation, live preview, and version rollback.
 5. **Unified Admin Inbox & AI Triage Studio (`/admin/enquiries`)**: Two-pane workspace displaying raw messages side-by-side with editable AI extracted parameters, top 3 suggestions, and editable draft reply.
 6. **Executive ROI Dashboard (`/admin`)**: Business metric tracker demonstrating how reducing response lag from 12 hours to under 60 minutes retains ₹66.82 Lakh in annual margin.
-7. **Branded Printable Quote View (`/quotes/[id]`)**: Official proposal on Company A letterhead with itemized subtotal, statutory 5% GST, twin sharing note, and 1-click browser printing.
+7. **Branded Printable Quote View (`/quotes/[id]`)**: Demonstration proposal on Company A letterhead with itemized subtotal, assumed 5% GST, twin sharing note, and 1-click browser printing.
 8. **In-House Travel Blog & Package Attribution (`/blog` & `/blog/[slug]`)**: Editorial articles hosted directly on-domain that feature direct booking cards for corresponding tour circuits.
 
 ---
 
-## 6. Testing, Quality & Security
+## 6 Testing Quality and Security
 
-### Automated Test Suite (`tests/core-logic.test.ts`)
+### Automated Test Suite
 Run via `npm test` using Node's native test runner:
 * **AI Extraction Tests:** Validates extraction of party size (adults/kids), travel window, budget in INR, and must-haves on sample queries from the brief.
 * **Package Recommendation Scoring:** Validates that `PKG-KL-07` is selected as the #1 best fit for family + houseboat queries.
@@ -220,22 +231,32 @@ Run via `npm test` using Node's native test runner:
 * **Instant Acknowledgment SLA:** Verifies generation of instant branded acknowledgment templates with reference tracking IDs.
 * **Package Versioning & Rollback:** Verifies snapshot generation and historical state restoration.
 
-### Security & Privacy Safeguards
-* **Zero Secrets in Repository:** No API keys or credentials committed to source control.
+### Security and Privacy Safeguards
+* **No Production Secrets in Repository:** No API keys or production credentials are committed. The documented reviewer accounts and shared demo password are intentionally public test data.
 * **DPDP Act 2023 Consent Enforcement:** Explicit opt-in captured before storing lead contact details.
 * **Sanitized Inputs:** All SQLite queries utilize parameterized statements (`db.prepare(...).all(...)`), preventing SQL injection attacks.
-* **Access Control Simulation:** Role simulation switcher enforces role boundaries between Admin, Editor, and Consultant.
+* **Authentication and Access Control:** Staff authenticate through a dedicated sign-in page. The server issues a signed, HTTP-only, same-site session cookie with an eight-hour expiry. Server pages and mutating/read APIs repeat role checks: admins have full access, editors manage packages/blogs, and consultants manage enquiries/quotes.
+* **Server Validation:** Public enquiry payloads enforce name, email, message and length constraints, accepted sources, and explicit consent for digital follow-up. SQLite statements are parameterized.
 
 ---
 
-## 7. Tradeoffs, What Was Cut, and What Comes Next
+## 7 Tradeoffs Scope and Next Steps
 
-### What Was Cut (In Accordance with Scope Boundaries)
+### What Was Cut
 1. **Live Flight & Hotel Inventory Sync:** Excluded per the brief (*"Out of scope: Online payment and live hotel or flight inventory"*). Packages feature curated hotel tiers rather than dynamic GDS feeds.
 2. **Payment Gateway Integration:** Direct payment checkout was omitted in favor of official quote generation and travel consultant consultation.
 3. **Native iOS/Android Applications:** Responsive web layouts were prioritized to deliver an optimal mobile experience for travelers without app store download friction.
+4. **Real Message Delivery and Channel Webhooks:** Acknowledgements and consultant sends are recorded in-app only, as instructed by the core build’s mocked outside-systems constraint.
+5. **Server-Generated PDF:** Quotes have a print-optimized page and browser Save as PDF flow. Automated file generation, attachment storage and outbound email were not implemented.
+6. **Complete 140-URL Migration:** Only representative mappings are included because the legacy URL inventory was not supplied.
 
-### Roadmap & Next Steps
+### Known Limitations
+* SQLite is appropriate for this self-contained evaluation and a single persistent Node instance. A multi-instance production rollout should migrate to managed PostgreSQL and shared object storage.
+* The deterministic extractor handles the demonstrated English phrasing and common INR expressions, but not arbitrary multilingual or ambiguous messages. Low-confidence fields remain editable and nothing is sent without review.
+* Scheduled package status is stored, but a background publication scheduler is not implemented in the core slice.
+* Remote sample images require network access; production should use an approved media library and image ownership checks.
+
+### Roadmap and Next Steps
 1. **WhatsApp Business Cloud API Integration:** Wire the existing AI triage reply generator into official WhatsApp Webhooks with template messaging approval.
 2. **Automated PDF Export via Headless Chromium:** Enhance the printable quote view with automated server-side PDF generation attached directly to outbound consultant emails.
 3. **Multi-Currency Pricing for Foreign Inbound Groups:** Add automated exchange rate conversion (USD, GBP, EUR) for foreign academic and leisure tours while maintaining statutory INR billing in Kochi.

@@ -1,9 +1,12 @@
 import db, { initDatabase } from "@/lib/db";
 import { EnquiriesInboxClient } from "./EnquiriesInboxClient";
+import { hasRole } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 initDatabase();
 
-export default function EnquiriesPage() {
+export default async function EnquiriesPage() {
+  if (!(await hasRole(["admin", "consultant"]))) redirect("/admin");
   const enquiries = db.prepare(`
     SELECT e.*, p.title as package_title, p.slug as package_slug, u.name as consultant_name
     FROM enquiries e

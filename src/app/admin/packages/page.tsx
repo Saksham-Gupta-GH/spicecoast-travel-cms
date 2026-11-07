@@ -1,9 +1,12 @@
 import db, { initDatabase } from "@/lib/db";
 import { PackagesCmsClient } from "./PackagesCmsClient";
+import { hasRole } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 initDatabase();
 
-export default function PackagesAdminPage() {
+export default async function PackagesAdminPage() {
+  if (!(await hasRole(["admin", "editor"]))) redirect("/admin");
   const packages = db.prepare(`
     SELECT p.*,
       MIN(sp.deluxe_price_pp) as min_deluxe_price,

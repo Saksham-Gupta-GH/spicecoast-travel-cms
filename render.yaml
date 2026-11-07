@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: spicecoast-travel-cms
+    runtime: node
+    plan: starter
+    region: singapore
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: DATABASE_PATH
+        value: /var/data/spicecoast.db
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: NEXT_PUBLIC_SITE_URL
+        sync: false
+    disk:
+      name: spicecoast-data
+      mountPath: /var/data
+      sizeGB: 1

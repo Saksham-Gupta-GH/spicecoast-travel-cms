@@ -20,6 +20,11 @@
 # production
 /build
 
+# local SQLite runtime files (the app seeds a fresh database automatically)
+spicecoast.db
+spicecoast.db-shm
+spicecoast.db-wal
+
 # misc
 .DS_Store
 *.pem

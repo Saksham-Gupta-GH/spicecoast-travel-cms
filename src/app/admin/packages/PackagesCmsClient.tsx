@@ -1,19 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Image from "next/image";
 import {
-  Package,
   Plus,
   Copy,
   Edit2,
   Eye,
   History,
   CheckCircle2,
-  Trash2,
-  Clock,
-  Sparkles,
-  ArrowRight,
   X,
   RotateCcw,
 } from "lucide-react";
@@ -23,7 +18,7 @@ interface Props {
 }
 
 export function PackagesCmsClient({ initialPackages }: Props) {
-  const [packages, setPackages] = useState<any[]>(initialPackages);
+  const [packages] = useState<any[]>(initialPackages);
   const [editingPkg, setEditingPkg] = useState<any | null>(null);
   const [historyPkg, setHistoryPkg] = useState<any | null>(null);
   const [previewPkg, setPreviewPkg] = useState<any | null>(null);
@@ -402,7 +397,7 @@ export function PackagesCmsClient({ initialPackages }: Props) {
                     Seasonal Tariff Matrix (Twin Sharing pp)
                   </h4>
                   <span className="text-[11px] text-emerald-800 font-semibold bg-emerald-100 px-2 py-0.5 rounded">
-                    5% GST Mandated
+                    5% GST Assumption
                   </span>
                 </div>
 
@@ -529,7 +524,7 @@ export function PackagesCmsClient({ initialPackages }: Props) {
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-slate-900">Version {v.version_number}</span>
                       <span className="text-[10px] text-slate-400">
-                        {new Date(v.created_at).toLocaleString()}
+                        {new Date(v.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}
                       </span>
                     </div>
                     <p className="text-slate-600 mt-1">{v.change_summary}</p>
@@ -573,9 +568,11 @@ export function PackagesCmsClient({ initialPackages }: Props) {
 
             <div className="space-y-4">
               <div className="aspect-[21/9] rounded-xl overflow-hidden bg-slate-100">
-                <img
+                <Image
                   src={previewPkg.featured_image}
                   alt={previewPkg.title}
+                  width={1200}
+                  height={514}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -600,11 +597,11 @@ export function PackagesCmsClient({ initialPackages }: Props) {
                     {previewPkg.seasonal_prices?.map((sp: any, i: number) => (
                       <tr key={i}>
                         <td className="p-3 font-semibold">{sp.season_name}</td>
-                        <td className="p-3 font-mono">₹{sp.standard_price_pp.toLocaleString()}</td>
+                        <td className="p-3 font-mono">₹{sp.standard_price_pp.toLocaleString("en-IN")}</td>
                         <td className="p-3 font-mono font-bold text-emerald-800 bg-emerald-50/40">
-                          ₹{sp.deluxe_price_pp.toLocaleString()}
+                          ₹{sp.deluxe_price_pp.toLocaleString("en-IN")}
                         </td>
-                        <td className="p-3 font-mono">₹{sp.luxury_price_pp.toLocaleString()}</td>
+                        <td className="p-3 font-mono">₹{sp.luxury_price_pp.toLocaleString("en-IN")}</td>
                       </tr>
                     ))}
                   </tbody>

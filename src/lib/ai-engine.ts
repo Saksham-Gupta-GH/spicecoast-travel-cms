@@ -31,7 +31,7 @@ export interface AIDraftReplyResult {
 /**
  * Deterministic NLP Extraction Rule Engine
  * Guaranteed to run 100% offline with zero token cost and zero network lag,
- * with fallbacks for optional live LLM calls (TypeRouter / Gemini).
+ * using deterministic, testable local extraction and database-backed ranking.
  */
 export function extractEnquiryLocally(message: string): ExtractedEnquiryData {
   const text = message.toLowerCase();
@@ -158,7 +158,7 @@ export function getPackageSuggestions(extracted: ExtractedEnquiryData, message: 
 
   const scored = packages.map((pkg) => {
     let score = 50; // base score
-    let reasons: string[] = [];
+    const reasons: string[] = [];
 
     const text = message.toLowerCase();
     const destJson = JSON.parse(pkg.destinations_json || "[]");
@@ -272,7 +272,7 @@ Official Seasonal Pricing Table (Twin-Sharing Basis):
 ${pricingBreakdownText}
 ${childNote}${specialNote}
 
-All our packages include private chauffeur-driven AC vehicle, daily breakfast, 24/7 on-tour customer support, driver allowances, toll/parking, and mandatory 5% GST.
+All demo packages include private chauffeur-driven AC vehicle, daily breakfast, 24/7 on-tour customer support, driver allowances, toll/parking, and the assumed 5% GST shown in the tariff table.
 
 Would you like us to prepare a formal customized day-wise quote and reserve accommodation options for your travel dates?
 

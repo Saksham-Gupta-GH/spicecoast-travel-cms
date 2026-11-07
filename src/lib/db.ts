@@ -2,9 +2,10 @@ import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 
-const dbPath = path.join(process.cwd(), "spicecoast.db");
+const dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), "spicecoast.db");
 
-// Ensure database directory exists
+// Production hosts can mount a persistent volume and point DATABASE_PATH at it.
+fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 const db = new Database(dbPath);
 
 // Enable foreign keys and WAL mode for high concurrency

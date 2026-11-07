@@ -1,9 +1,12 @@
 import db, { initDatabase } from "@/lib/db";
 import { QuotesClient } from "./QuotesClient";
+import { hasRole } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 initDatabase();
 
-export default function AdminQuotesPage() {
+export default async function AdminQuotesPage() {
+  if (!(await hasRole(["admin", "consultant"]))) redirect("/admin");
   const quotes = db.prepare(`
     SELECT q.*, p.title as package_title, p.slug as package_slug
     FROM quotes q

@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
+import { hasRole } from "@/lib/auth";
 
 initDatabase();
 
 export async function GET() {
+  if (!(await hasRole(["admin"]))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   try {
     const logs = db.prepare(`
       SELECT * FROM activity_logs

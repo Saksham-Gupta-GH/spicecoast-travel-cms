@@ -1,17 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import {
   Clock,
   MapPin,
   CheckCircle,
   XCircle,
-  Sparkles,
   ShieldCheck,
-  Building,
-  Calendar,
   Utensils,
-  Share2,
   ChevronDown,
   ChevronUp,
   MessageCircle,
@@ -56,7 +53,7 @@ export function PackageDetailClient({ pkg }: Props) {
             </span>
             <span className="bg-emerald-50 text-emerald-700 text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>DPDP Compliant</span>
+              <span>Consent Protected</span>
             </span>
           </div>
 
@@ -109,9 +106,11 @@ export function PackageDetailClient({ pkg }: Props) {
         {/* Gallery Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
           <div className="md:col-span-2 aspect-[16/10] rounded-2xl overflow-hidden bg-slate-100 shadow-sm">
-            <img
+            <Image
               src={pkg.featured_image}
               alt={pkg.title}
+              width={1200}
+              height={750}
               className="w-full h-full object-cover"
             />
           </div>
@@ -119,7 +118,7 @@ export function PackageDetailClient({ pkg }: Props) {
             {(pkg.gallery.slice(1, 3).length > 0 ? pkg.gallery.slice(1, 3) : [pkg.featured_image]).map(
               (img: string, idx: number) => (
                 <div key={idx} className="aspect-[16/10] md:aspect-auto md:h-full rounded-2xl overflow-hidden bg-slate-100 shadow-sm">
-                  <img src={img} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
+                  <Image src={img} alt={`Gallery ${idx + 1}`} width={640} height={400} className="w-full h-full object-cover" />
                 </div>
               )
             )}
@@ -201,7 +200,7 @@ export function PackageDetailClient({ pkg }: Props) {
             <div className="bg-slate-50 rounded-xl p-3.5 text-[11px] text-slate-600 border border-slate-200 flex items-start gap-2">
               <Info className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
               <span>
-                <strong>Pricing Note:</strong> Child with bed is charged at 50% of the per-person twin sharing rate. Includes AC private transportation throughout, breakfast, and mandatory 5% GST. No hidden booking surcharges.
+                <strong>Pricing Note:</strong> Child with bed is charged at 50% of the per-person twin sharing rate. Includes AC private transportation throughout, breakfast, and the demo&apos;s assumed 5% GST. No hidden booking surcharges.
               </span>
             </div>
           </div>

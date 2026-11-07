@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
-import { Clock, MapPin, CheckCircle, ArrowRight, Sparkles, Send } from "lucide-react";
+import { Clock, MapPin, CheckCircle, ArrowRight, Send } from "lucide-react";
 import { EnquiryModal } from "./EnquiryModal";
 
 interface PackageCardProps {
@@ -34,11 +35,12 @@ export function PackageCard({ pkg }: PackageCardProps) {
       <div className="bg-white rounded-2xl overflow-hidden border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-emerald-200 transition-all duration-300 flex flex-col group">
         {/* Image & Badges */}
         <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
-          <img
+          <Image
             src={pkg.featured_image}
             alt={pkg.title}
+            width={800}
+            height={500}
             className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-            loading="lazy"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 

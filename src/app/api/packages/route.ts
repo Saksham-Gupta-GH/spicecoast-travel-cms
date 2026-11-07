@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
+import { hasRole } from "@/lib/auth";
 
 // Ensure DB is ready
 initDatabase();
@@ -62,6 +63,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (!(await hasRole(["admin", "editor"]))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   try {
     const body = await request.json();
     const {

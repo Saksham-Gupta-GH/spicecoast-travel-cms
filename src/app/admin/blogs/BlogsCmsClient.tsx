@@ -3,13 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  Layers,
   Plus,
   ExternalLink,
-  Edit2,
-  CheckCircle2,
   X,
-  Compass,
 } from "lucide-react";
 
 interface Props {
@@ -18,7 +14,7 @@ interface Props {
 }
 
 export function BlogsCmsClient({ initialBlogs, packages }: Props) {
-  const [blogs, setBlogs] = useState<any[]>(initialBlogs);
+  const [blogs] = useState<any[]>(initialBlogs);
   const [isEditing, setIsEditing] = useState(false);
   const [editingBlog, setEditingBlog] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);

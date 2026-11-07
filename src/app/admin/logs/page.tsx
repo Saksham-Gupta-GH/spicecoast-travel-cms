@@ -1,9 +1,11 @@
 import db, { initDatabase } from "@/lib/db";
-import { History, Shield, User, Clock, FileText } from "lucide-react";
+import { hasRole } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 initDatabase();
 
-export default function AdminLogsPage() {
+export default async function AdminLogsPage() {
+  if (!(await hasRole(["admin"]))) redirect("/admin");
   const logs = db.prepare(`
     SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 100
   `).all() as any[];

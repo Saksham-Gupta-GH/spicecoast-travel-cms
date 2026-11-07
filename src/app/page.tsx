@@ -1,21 +1,18 @@
 import Link from "next/link";
+import Image from "next/image";
 import db, { initDatabase } from "@/lib/db";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { PackageCard } from "@/components/PackageCard";
 import { PublicEnquiryForm } from "@/components/PublicEnquiryForm";
 import {
-  Compass,
   ShieldCheck,
   Clock,
   Sparkles,
   Award,
   Users,
-  MapPin,
   ChevronRight,
-  Coffee,
   Waves,
-  Sun,
   Star,
 } from "lucide-react";
 
@@ -59,9 +56,12 @@ export default function HomePage() {
       <section className="relative bg-slate-900 text-white overflow-hidden py-20 lg:py-28">
         {/* Background Image with Dark Gradient Overlay */}
         <div className="absolute inset-0 z-0">
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=1800&auto=format&fit=crop"
             alt="Kerala Backwaters and Tea Plantations"
+            fill
+            priority
+            sizes="100vw"
             className="w-full h-full object-cover opacity-35"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-transparent" />
@@ -71,7 +71,7 @@ export default function HomePage() {
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 bg-emerald-950/80 border border-emerald-500/30 text-emerald-300 text-xs font-semibold px-3.5 py-1.5 rounded-full mb-6">
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>Company A • Kochi's Leading Holiday Operator</span>
+              <span>Company A • Kochi&apos;s Leading Holiday Operator</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
@@ -157,8 +157,8 @@ export default function HomePage() {
                 <Award className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide">DPDP Compliant</h4>
-                <p className="text-[11px] text-slate-500">Digital Personal Data Act 2023</p>
+                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide">Consent Captured</h4>
+                <p className="text-[11px] text-slate-500">Explicit digital follow-up opt-in</p>
               </div>
             </div>
           </div>
@@ -183,7 +183,7 @@ export default function HomePage() {
             href="/packages"
             className="mt-4 md:mt-0 text-sm font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 group"
           >
-            <span>View all 60 packages</span>
+                <span>View package catalogue</span>
             <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition" />
           </Link>
         </div>
@@ -247,9 +247,11 @@ export default function HomePage() {
 
             <div className="relative">
               <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-emerald-800/60">
-                <img
+                <Image
                   src="https://images.unsplash.com/photo-1593693397690-362cb9666fc2?w=1000&auto=format&fit=crop"
                   alt="Alleppey Houseboat at Sunset"
+                  width={1000}
+                  height={750}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -288,9 +290,11 @@ export default function HomePage() {
               className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition flex flex-col sm:flex-row group"
             >
               <div className="sm:w-2/5 aspect-[16/10] sm:aspect-auto overflow-hidden bg-slate-100">
-                <img
+                <Image
                   src={b.featured_image}
                   alt={b.title}
+                  width={640}
+                  height={400}
                   className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                 />
               </div>

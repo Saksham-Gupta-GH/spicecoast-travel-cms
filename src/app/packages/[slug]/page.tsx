@@ -4,19 +4,7 @@ import db, { initDatabase } from "@/lib/db";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { PackageDetailClient } from "./PackageDetailClient";
-import {
-  Clock,
-  MapPin,
-  CheckCircle,
-  XCircle,
-  Sparkles,
-  ShieldCheck,
-  Building,
-  Calendar,
-  Utensils,
-  ChevronRight,
-  Info,
-} from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 initDatabase();
 

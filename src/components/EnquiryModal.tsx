@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Send, CheckCircle2, AlertCircle, Sparkles, Shield, X, Clock } from "lucide-react";
+import { Send, CheckCircle2, AlertCircle, Sparkles, X, Clock } from "lucide-react";
 
 interface EnquiryModalProps {
   packageId?: string;
@@ -127,7 +127,7 @@ export function EnquiryModal({ packageId, packageTitle, isOpen, onClose }: Enqui
                   </div>
                   <div>
                     <span className="text-slate-400">Target Budget:</span>{" "}
-                    {successData.extracted.budgetInr ? `₹${successData.extracted.budgetInr.toLocaleString()}` : "Flexible"}
+                    {successData.extracted.budgetInr ? `₹${successData.extracted.budgetInr.toLocaleString("en-IN")}` : "Flexible"}
                   </div>
                 </div>
               </div>

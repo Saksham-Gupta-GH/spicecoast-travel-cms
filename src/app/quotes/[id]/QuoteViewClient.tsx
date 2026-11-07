@@ -6,14 +6,6 @@ import {
   Compass,
   Printer,
   CheckCircle2,
-  Phone,
-  Mail,
-  MapPin,
-  Calendar,
-  Users,
-  ShieldCheck,
-  Building,
-  Clock,
   ArrowLeft,
 } from "lucide-react";
 
@@ -167,9 +159,9 @@ export function QuoteViewClient({ quote }: Props) {
 
                 <tr>
                   <td className="p-3.5">
-                    <div className="font-semibold text-slate-900">Mandatory Goods &amp; Services Tax (GST @ 5%)</div>
+                    <div className="font-semibold text-slate-900">Demonstration Goods &amp; Services Tax (GST @ 5%)</div>
                     <div className="text-slate-500 text-[11px]">
-                      Tour operator statutory compliance (CGST 2.5% + SGST 2.5%)
+                      Demonstration tax assumption (CGST 2.5% + SGST 2.5%)
                     </div>
                   </td>
                   <td className="p-3.5 text-center font-mono">5.0%</td>

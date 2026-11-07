@@ -1,22 +1,23 @@
 import Link from "next/link";
 import db, { initDatabase } from "@/lib/db";
+import { getStaffSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import {
-  TrendingUp,
   Inbox,
   Package,
   Clock,
   Sparkles,
   ArrowRight,
-  ShieldAlert,
-  FileCheck,
   CheckCircle2,
   DollarSign,
-  Users,
 } from "lucide-react";
 
 initDatabase();
 
-export default function AdminDashboardPage() {
+export default async function AdminDashboardPage() {
+  const session = await getStaffSession();
+  if (session?.role === "editor") redirect("/admin/packages");
+  if (session?.role === "consultant") redirect("/admin/enquiries");
   const packageStats = db.prepare(`
     SELECT
       COUNT(*) as total,

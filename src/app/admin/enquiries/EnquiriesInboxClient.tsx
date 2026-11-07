@@ -6,19 +6,11 @@ import {
   Sparkles,
   Send,
   CheckCircle2,
-  AlertCircle,
-  Clock,
-  User,
   Phone,
   Mail,
-  ShieldCheck,
   Edit3,
   FileText,
   Search,
-  Filter,
-  ArrowRight,
-  ExternalLink,
-  MessageCircle,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -34,6 +26,10 @@ export function EnquiriesInboxClient({ initialEnquiries, packages }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
 
   const currentEnquiry = enquiries.find((e) => e.id === selectedId) || enquiries[0];
+  const suggestedPackages = (currentEnquiry?.suggested_packages || [])
+    .map((packageId: string) => packages.find((pkg) => pkg.id === packageId))
+    .filter(Boolean)
+    .slice(0, 3);
 
   // Editable AI Fields State
   const [editDest, setEditDest] = useState(currentEnquiry?.ai_destination || "");
@@ -254,7 +250,7 @@ export function EnquiriesInboxClient({ initialEnquiries, packages }: Props) {
                     <span>
                       {enq.ai_budget_inr ? `Budget: ₹${enq.ai_budget_inr.toLocaleString("en-IN")}` : "Flexible"}
                     </span>
-                    <span>{new Date(enq.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span>{new Date(enq.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Kolkata" })}</span>
                   </div>
                 </div>
               );
@@ -423,7 +419,7 @@ export function EnquiriesInboxClient({ initialEnquiries, packages }: Props) {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                {packages.slice(0, 3).map((pkg, idx) => (
+                {suggestedPackages.map((pkg: any, idx: number) => (
                   <div
                     key={pkg.id}
                     className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-emerald-50/50 hover:border-emerald-200 transition flex flex-col justify-between"

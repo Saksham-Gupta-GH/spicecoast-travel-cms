@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import db, { initDatabase } from "@/lib/db";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { ChevronRight, ArrowRight, User, Calendar, MapPin, Sparkles, Compass } from "lucide-react";
+import { ChevronRight, ArrowRight, User, Sparkles, Compass } from "lucide-react";
 
 initDatabase();
 
@@ -73,9 +74,11 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
             </div>
 
             <div className="aspect-[16/9] rounded-xl overflow-hidden bg-slate-100">
-              <img
+              <Image
                 src={blog.featured_image}
                 alt={blog.title}
+                width={1200}
+                height={675}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -125,9 +128,11 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
                       className="border border-slate-200/80 rounded-xl p-3.5 hover:border-emerald-300 transition group bg-slate-50/60"
                     >
                       <div className="aspect-[16/10] rounded-lg overflow-hidden bg-slate-100 mb-2.5">
-                        <img
+                        <Image
                           src={pkg.featured_image}
                           alt={pkg.title}
+                          width={640}
+                          height={400}
                           className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                         />
                       </div>

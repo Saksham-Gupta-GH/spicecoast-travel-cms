@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShieldCheck, Phone, Mail, MapPin, Compass, Clock, Award } from "lucide-react";
+import { ShieldCheck, Phone, Mail, MapPin, Compass, Clock } from "lucide-react";
 
 export function Footer() {
   return (
@@ -15,7 +15,7 @@ export function Footer() {
               <span className="text-xl font-bold text-white tracking-tight">SpiceCoast Holidays</span>
             </div>
             <p className="text-sm text-slate-400 leading-relaxed">
-              Company A, Kochi. Curating signature Kerala backwater voyages, Munnar tea plantation stays, and South Indian heritage trails since 2018. Over 4,300 bespoke journeys hosted annually.
+              Company A, Kochi. A demonstration portal for Kerala backwater voyages, Munnar tea plantation stays, and South Indian heritage trails, based on the supplied client brief.
             </p>
             <div className="flex items-center gap-2 text-xs text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 p-2.5 rounded-lg">
               <Clock className="w-4 h-4 shrink-0" />
@@ -76,9 +76,9 @@ export function Footer() {
               <div className="flex items-start gap-2 bg-slate-800/80 p-3 rounded-lg border border-slate-700/60">
                 <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-medium text-slate-200">DPDP Act 2023 Compliant</div>
+                  <div className="font-medium text-slate-200">DPDP Consent Safeguard</div>
                   <div className="text-[11px] text-slate-400 mt-0.5">
-                    Traveller personal data is encrypted and processed strictly with consent. No third-party data broker sharing.
+                    Digital follow-up consent is captured with each web enquiry. Staff inbox access is restricted by signed sessions and role checks.
                   </div>
                 </div>
               </div>

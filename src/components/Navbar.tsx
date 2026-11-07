@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Compass, Phone, Sparkles, Shield, User, Menu, X, ArrowRight } from "lucide-react";
+import { Compass, Phone, Sparkles, Shield, Menu, X, ArrowRight } from "lucide-react";
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -14,7 +14,7 @@ export function Navbar() {
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
             <Shield className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Kochi Licensed Tour Operator • Est. 2018</span>
+            <span>Company A Demonstration Portal • Kochi</span>
           </span>
           <span className="hidden md:inline text-emerald-400">•</span>
           <span className="hidden md:inline">₹30 Cr+ Curated Holidays • 4,300+ Annual Travelers</span>

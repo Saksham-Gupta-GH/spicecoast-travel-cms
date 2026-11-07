@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Send, CheckCircle2, AlertCircle, Sparkles, Clock, Shield } from "lucide-react";
+import { Send, CheckCircle2, AlertCircle, Sparkles, Clock } from "lucide-react";
 
 export function PublicEnquiryForm() {
   const [name, setName] = useState("");
@@ -202,7 +202,7 @@ export function PublicEnquiryForm() {
             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600/30 focus:border-emerald-600 leading-relaxed"
           />
           <p className="text-[11px] text-slate-400 mt-1">
-            Our AI extracts your party size, dates, budget and must-haves, matching against our 60 holiday packages.
+            Our triage engine extracts your party size, dates, budget and must-haves, then ranks the seeded package catalogue.
           </p>
         </div>
 

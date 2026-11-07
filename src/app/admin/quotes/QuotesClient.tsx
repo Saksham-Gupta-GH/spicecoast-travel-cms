@@ -3,16 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  FileText,
   Plus,
   ExternalLink,
-  Printer,
-  CheckCircle2,
-  Calendar,
-  User,
-  DollarSign,
   X,
-  Sparkles,
 } from "lucide-react";
 
 interface Props {
@@ -22,7 +15,7 @@ interface Props {
 }
 
 export function QuotesClient({ initialQuotes, packages, enquiries }: Props) {
-  const [quotes, setQuotes] = useState<any[]>(initialQuotes);
+  const [quotes] = useState<any[]>(initialQuotes);
   const [isCreating, setIsCreating] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -96,7 +89,7 @@ export function QuotesClient({ initialQuotes, packages, enquiries }: Props) {
             Client Quotes &amp; Proposals
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Generate branded, itemized PDF quotes from packages with twin sharing &amp; 5% GST calculation.
+            Generate branded, printable quotes from packages with twin sharing &amp; the demo&apos;s 5% GST assumption.
           </p>
         </div>
 

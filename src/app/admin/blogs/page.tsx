@@ -1,9 +1,12 @@
 import db, { initDatabase } from "@/lib/db";
 import { BlogsCmsClient } from "./BlogsCmsClient";
+import { hasRole } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 initDatabase();
 
-export default function AdminBlogsPage() {
+export default async function AdminBlogsPage() {
+  if (!(await hasRole(["admin", "editor"]))) redirect("/admin");
   const blogs = db.prepare(`
     SELECT * FROM blogs ORDER BY created_at DESC
   `).all() as any[];

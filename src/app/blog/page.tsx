@@ -1,8 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 import db, { initDatabase } from "@/lib/db";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { ChevronRight, Calendar, User, Compass, Sparkles } from "lucide-react";
+import { ChevronRight, User, Sparkles } from "lucide-react";
 
 initDatabase();
 
@@ -40,16 +41,17 @@ export default function BlogListPage() {
         {/* Blog grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {blogs.map((b: any) => {
-            const relatedIds = JSON.parse(b.related_package_ids_json || "[]");
             return (
               <article
                 key={b.id}
                 className="bg-white rounded-2xl overflow-hidden border border-slate-200/80 shadow-sm hover:shadow-lg transition flex flex-col group"
               >
                 <div className="aspect-[16/9] overflow-hidden bg-slate-100 relative">
-                  <img
+                  <Image
                     src={b.featured_image}
                     alt={b.title}
+                    width={800}
+                    height={450}
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                   />
                   <div className="absolute top-3 left-3 bg-white/95 backdrop-blur text-emerald-800 font-semibold text-xs px-2.5 py-1 rounded-full shadow-sm">

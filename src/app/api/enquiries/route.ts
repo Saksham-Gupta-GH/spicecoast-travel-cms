@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
-import { triageEnquiry, getInstantAcknowledgement } from "@/lib/ai-engine";
+import { triageEnquiry } from "@/lib/ai-engine";
+import { hasRole } from "@/lib/auth";
 
 initDatabase();
 
 export async function GET(request: Request) {
+  if (!(await hasRole(["admin", "consultant"]))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
@@ -55,11 +57,22 @@ export async function POST(request: Request) {
       raw_message,
       package_id = null,
       source = "web_form",
-      dpdp_consent = true,
+      dpdp_consent = false,
     } = body;
 
-    if (!traveller_name || !email || !raw_message) {
+    const validSources = ["web_form", "whatsapp", "email", "phone", "chat"];
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (
+      typeof traveller_name !== "string" || traveller_name.trim().length < 2 || traveller_name.length > 100 ||
+      typeof email !== "string" || !emailPattern.test(email) || email.length > 200 ||
+      typeof raw_message !== "string" || raw_message.trim().length < 10 || raw_message.length > 3000 ||
+      (phone && (typeof phone !== "string" || phone.length > 30)) ||
+      !validSources.includes(source)
+    ) {
       return NextResponse.json({ success: false, error: "Missing required enquiry fields" }, { status: 400 });
+    }
+    if (source === "web_form" && dpdp_consent !== true) {
+      return NextResponse.json({ success: false, error: "Consent is required for digital follow-up" }, { status: 400 });
     }
 
     // Auto-generate enquiry ID
@@ -89,10 +102,10 @@ export async function POST(request: Request) {
       id: enquiryId,
       package_id: package_id || (triageResult.suggestedPackages[0]?.id ?? null),
       source,
-      traveller_name,
-      email,
+      traveller_name: traveller_name.trim(),
+      email: email.trim().toLowerCase(),
       phone: phone || "Not provided",
-      raw_message,
+      raw_message: raw_message.trim(),
       dpdp_consent_given: dpdp_consent ? 1 : 0,
       ai_destination: triageResult.extracted.destination,
       ai_travel_dates: triageResult.extracted.travelDates,

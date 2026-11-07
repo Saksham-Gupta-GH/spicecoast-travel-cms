@@ -16,7 +16,7 @@ The project is built on Next.js 16 with TypeScript and an embedded zero-configur
 ### Step-by-Step Instructions
 ```bash
 # 1. Clone the repository
-git clone https://github.com/sakshamgupta/spicecoast-travel-cms.git
+git clone https://github.com/Saksham-Gupta-GH/spicecoast-travel-cms.git
 cd spicecoast-travel-cms
 
 # 2. Install dependencies
@@ -35,16 +35,18 @@ Open [http://localhost:3000](http://localhost:3000) in your web browser.
 
 ---
 
-## 2. Reviewer Demo Credentials & Simulated Roles
+## 2. Reviewer Demo Credentials and Roles
 
-The application includes a role simulation switcher in the top navigation bar of the Staff CMS (`/admin`), enabling reviewers to switch personas in 1 click without needing manual logout/login cycles.
+Open `/staff-login` or click **Staff CMS & AI Inbox**. These are fictional reviewer accounts. Each creates a signed, HTTP-only session and is authorized on both server pages and API routes.
 
 | Role | Name | Email | Permissions & Focus |
 | :--- | :--- | :--- | :--- |
-| **Founder & MD (Admin)** | Jawahar Kurian | `admin@spicecoast.in` | Full executive access: ROI dashboard, publishing packages, rollback, and audit log. |
-| **Content Editor** | Ananya Pillai | `editor@spicecoast.in` | CMS package editor, seasonal pricing tariffs, blog creation, and package linking. |
-| **Senior Tour Consultant** | Mathew Varghese | `consultant@spicecoast.in` | Unified enquiry inbox, AI triage correction, draft reply approvals, and quote generator. |
+| **Founder & MD (Admin)** | Jawahar Kurian | `admin@spicecoast.in` | Full access: dashboard, packages, enquiries, quotes, blogs and audit log. |
+| **Content Editor** | Ananya Pillai | `editor@spicecoast.in` | Package pricing/versioning and blog CMS only. |
+| **Senior Tour Consultant** | Mathew Varghese | `consultant@spicecoast.in` | Enquiry triage/replies and quote builder only. |
 | **Public Traveller** | Public Visitor | N/A | Public holiday browsing, filters, day-wise itineraries, instant enquiries, and quote view. |
+
+**Reviewer password for all three staff accounts:** `SpiceCoastDemo!2026`
 
 ---
 
@@ -53,25 +55,42 @@ The application includes a role simulation switcher in the top navigation bar of
 The application functions completely out of the box with default local heuristics. For optional production deployment or live external LLM connectivity, configure the following variables in a `.env.local` file:
 
 ```bash
-# Core Environment
+# Core environment
 PORT
 NODE_ENV
 NEXT_PUBLIC_SITE_URL
-
-# Optional External AI API Key (Falls back to deterministic local NLP if omitted)
-AI_API_KEY
-TYPEROUTER_API_KEY
-GEMINI_API_KEY
-
-# Optional Staff Session Secret
+DATABASE_PATH
 SESSION_SECRET
+
+# Optional reviewer-password overrides
+DEMO_ADMIN_PASSWORD
+DEMO_EDITOR_PASSWORD
+DEMO_CONSULTANT_PASSWORD
 ```
 
 > **Security Note:** In accordance with repository submission rules, no secrets, personal API tokens, or credentials are committed to the codebase.
 
+`SESSION_SECRET` is mandatory when `NODE_ENV=production`. `DATABASE_PATH` defaults to `./spicecoast.db` locally. The included Render blueprint sets it to `/var/data/spicecoast.db` on a persistent disk.
+
 ---
 
-## 4. Key Review Flows & Sample Data Verification
+## 4. Production Deployment on Render
+
+The repository includes `render.yaml` for a single Node.js service with a 1 GB persistent disk. A persistent Node instance is required because the core CMS writes to SQLite.
+
+1. Push the public repository to GitHub.
+2. In Render, choose **New → Blueprint** and select this repository.
+3. Accept the `render.yaml` service definition. Render generates `SESSION_SECRET` automatically.
+4. Set `NEXT_PUBLIC_SITE_URL` to the final `https://...onrender.com` URL.
+5. Deploy and verify `/`, `/packages/munnar-thekkady-alleppey-houseboat`, `/staff-login`, and an authenticated package edit.
+
+The blueprint uses Render’s paid Starter service because persistent disks are required. If a free ephemeral service is used instead, edits can disappear after a restart or redeploy and the deployment is not an honest demonstration of a CMS.
+
+For a multi-instance production system, replace SQLite with managed PostgreSQL before horizontal scaling.
+
+---
+
+## 5. Key Review Flows and Sample Data Verification
 
 ### Flow A: Verify Brief Sample Enquiry & AI Triage Studio
 1. Navigate to **[Enquiries & AI Triage](/admin/enquiries)**.
@@ -92,11 +111,11 @@ SESSION_SECRET
 5. Click **"Version History"** to inspect the audit snapshot and test the **"Revert"** button.
 6. Click the **"Duplicate"** icon next to any package to generate an instant draft copy in under 5 seconds.
 
-### Flow C: Generate Branded PDF Quote
+### Flow C: Generate a Branded Printable Quote
 1. Navigate to **[Quote Builder](/admin/quotes)**.
-2. Click **"View PDF Quote"** on quote **`#SCH-2026-Q8819`** (Dr. Evelyn Campbell).
-3. Verify the itemized twin-sharing tariff calculation and mandatory **5% GST** line item.
-4. Test the **"Print or Save as PDF"** button.
+2. Click **"View PDF Quote"** on the seeded Dr. Evelyn Campbell quote.
+3. Verify the itemized twin-sharing tariff calculation and assumed **5% GST** line item.
+4. Test **"Print or Save as PDF"**. This uses the browser print dialog; no PDF file is generated or emailed by the server.
 
 ### Flow D: Public Traveler Experience & DPDP Consent
 1. Visit the **[Public Homepage](/)** and **[Package Catalog](/packages)**.
@@ -107,10 +126,12 @@ SESSION_SECRET
 
 ---
 
-## 5. Running Automated Logic Tests
+## 6. Verification Commands
 
 ```bash
 npm test
+npm run lint
+npm run build
 ```
 **Test Coverage Includes:**
 * `AI Enquiry Extraction`: Extracting party size, budget, travel window, and must-haves.
@@ -118,3 +139,5 @@ npm test
 * `Strict Pricing Integrity`: Verification that draft replies query only database prices with 5% GST and twin sharing.
 * `Instant Acknowledgement SLA`: Guaranteed template confirmation generation.
 * `Package Versioning`: Snapshot persistence and rollback execution.
+
+At handoff, the core test suite passes 8/8 tests and the production build completes. ESLint completes with warnings from legacy broad SQLite row types and unused icon imports; it has no lint errors.

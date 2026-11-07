@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SpiceCoast Travel CMS
 
-## Getting Started
+A full-stack take-home build for Company A, Kochi: server-rendered package pages, versioned seasonal pricing, traveller enquiries, and human-reviewed AI triage.
 
-First, run the development server:
+## Core flows
+
+- Public package catalogue and server-rendered package detail pages
+- Package CMS with seasonal tariffs, preview, duplication, version history and rollback
+- Package enquiry forms with explicit digital follow-up consent
+- Unified staff inbox with deterministic field extraction, ranked package suggestions and editable reply drafts
+- Signed staff sessions with admin, editor and consultant authorization
+- Seeded sample content, sitemap, representative legacy redirects and printable quote views
+
+## Run locally
 
 ```bash
+npm install
+npm test
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). The SQLite database is created and seeded automatically.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Reviewer staff accounts:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `admin@spicecoast.in`
+- `editor@spicecoast.in`
+- `consultant@spicecoast.in`
 
-## Learn More
+Password for all demo accounts: `SpiceCoastDemo!2026`
 
-To learn more about Next.js, take a look at the following resources:
+## Quality checks
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm test
+npm run lint
+npm run build
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+See [deployment.md](./deployment.md) for environment variables, role-specific demo flows and the persistent-disk deployment path. See [Technical_Design_Document.docx](./Technical_Design_Document.docx) for architecture, assumptions, tradeoffs and known limitations.
 
-## Deploy on Vercel
+## Deployment note
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The CMS writes to SQLite. Deploy it as one persistent Node.js instance using the included `render.yaml`; a stateless serverless filesystem is not suitable for durable CMS edits. For horizontal production scaling, migrate persistence to managed PostgreSQL.

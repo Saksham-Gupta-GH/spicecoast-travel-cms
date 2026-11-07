@@ -7,7 +7,7 @@ initDatabase();
 
 export const metadata = {
   title: "Kerala & South India Holiday Packages | SpiceCoast Holidays Kochi",
-  description: "Browse 60+ bespoke holiday packages across Kerala, Tamil Nadu, and South India. Transparent seasonal pricing on twin sharing basis with 5% GST included.",
+  description: "Browse curated holiday packages across Kerala, Tamil Nadu, and South India. Transparent seasonal pricing on twin sharing basis with 5% GST included.",
 };
 
 export default function PackagesPage() {
