@@ -3,15 +3,15 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { PackagesCatalogClient } from "./PackagesCatalogClient";
 
-initDatabase();
+await initDatabase();
 
 export const metadata = {
   title: "Kerala & South India Holiday Packages | SpiceCoast Holidays Kochi",
   description: "Browse curated holiday packages across Kerala, Tamil Nadu, and South India. Transparent seasonal pricing on twin sharing basis with 5% GST included.",
 };
 
-export default function PackagesPage() {
-  const packages = db.prepare(`
+export default async function PackagesPage() {
+  const packages = await db.prepare(`
     SELECT p.*,
       MIN(sp.deluxe_price_pp) as min_price,
       MIN(sp.standard_price_pp) as min_standard_price

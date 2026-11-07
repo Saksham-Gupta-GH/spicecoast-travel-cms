@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
 import { hasRole } from "@/lib/auth";
 
-initDatabase();
+await initDatabase();
 
 export async function POST(
   request: Request,
@@ -11,19 +11,19 @@ export async function POST(
   if (!(await hasRole(["admin", "editor"]))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   try {
     const { id } = await params;
-    const original = db.prepare("SELECT * FROM packages WHERE id = ?").get(id) as any;
+    const original = await db.prepare("SELECT * FROM packages WHERE id = ?").get(id) as any;
 
     if (!original) {
       return NextResponse.json({ success: false, error: "Original package not found" }, { status: 404 });
     }
 
-    const count = (db.prepare("SELECT COUNT(*) as c FROM packages").get() as any).c + 1;
+    const count = (await db.prepare("SELECT COUNT(*)::int as c FROM packages").get() as any).c + 1;
     const newId = `PKG-KL-${count.toString().padStart(2, "0")}`;
     const newTitle = `${original.title} (Copy)`;
     const newSlug = `${original.slug}-copy-${Date.now().toString().slice(-4)}`;
 
     // Duplicate package
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO packages (
         id, slug, title, tagline, description, duration_days, duration_nights,
         destination_summary, destinations_json, category, featured_image, gallery_json,
@@ -43,7 +43,7 @@ export async function POST(
     });
 
     // Duplicate seasonal prices
-    const prices = db.prepare("SELECT * FROM seasonal_prices WHERE package_id = ?").all(id) as any[];
+    const prices = await db.prepare("SELECT * FROM seasonal_prices WHERE package_id = ?").all(id) as any[];
     const insertPrice = db.prepare(`
       INSERT INTO seasonal_prices (
         id, package_id, season_name, period_label, start_month, end_month,
@@ -54,16 +54,16 @@ export async function POST(
       )
     `);
 
-    prices.forEach((p, idx) => {
+    await Promise.all(prices.map((p, idx) =>
       insertPrice.run({
         ...p,
         id: `PRC-${newId}-${idx + 1}`,
         package_id: newId,
-      });
-    });
+      })
+    ));
 
     // Duplicate itinerary days
-    const days = db.prepare("SELECT * FROM itinerary_days WHERE package_id = ?").all(id) as any[];
+    const days = await db.prepare("SELECT * FROM itinerary_days WHERE package_id = ?").all(id) as any[];
     const insertDay = db.prepare(`
       INSERT INTO itinerary_days (
         id, package_id, day_number, title, description, meals_included, overnight_location, activity_tags_json
@@ -72,16 +72,16 @@ export async function POST(
       )
     `);
 
-    days.forEach((d, idx) => {
+    await Promise.all(days.map((d, idx) =>
       insertDay.run({
         ...d,
         id: `ITN-${newId}-D${idx + 1}`,
         package_id: newId,
-      });
-    });
+      })
+    ));
 
     // Log activity
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO activity_logs (user_name, action, entity_type, entity_id, details)
       VALUES ('Staff', 'PACKAGE_DUPLICATE', 'package', ?, ?)
     `).run(newId, `Duplicated package ${id} into new draft ${newId} (${newTitle})`);

@@ -146,11 +146,11 @@ export function extractEnquiryLocally(message: string): ExtractedEnquiryData {
 /**
  * Suggest Top 3 Best-Fit Packages from Database
  */
-export function getPackageSuggestions(extracted: ExtractedEnquiryData, message: string): PackageSuggestion[] {
-  const packages = db.prepare(`
+export async function getPackageSuggestions(extracted: ExtractedEnquiryData, message: string): Promise<PackageSuggestion[]> {
+  const packages = await db.prepare(`
     SELECT p.*,
       MIN(sp.deluxe_price_pp) as min_deluxe_price,
-      sp.season_name
+      MIN(sp.season_name) as season_name
     FROM packages p
     LEFT JOIN seasonal_prices sp ON p.id = sp.package_id
     GROUP BY p.id
@@ -222,22 +222,22 @@ export function getPackageSuggestions(extracted: ExtractedEnquiryData, message: 
  * STRICT CONSTRAINT:
  * "prices in drafts come from the package price table, never from the AI."
  */
-export function generateDraftReply(
+export async function generateDraftReply(
   travellerName: string,
   extracted: ExtractedEnquiryData,
   suggestions: PackageSuggestion[],
   consultantName: string = "Mathew Varghese"
-): string {
+): Promise<string> {
   const topPkgId = suggestions[0]?.id || "PKG-KL-07";
 
   // Fetch actual prices from the database price table for topPkgId
-  const prices = db.prepare(`
+  const prices = await db.prepare(`
     SELECT * FROM seasonal_prices
     WHERE package_id = ?
     ORDER BY standard_price_pp ASC
   `).all(topPkgId) as any[];
 
-  const pkgRecord = db.prepare(`SELECT * FROM packages WHERE id = ?`).get(topPkgId) as any;
+  const pkgRecord = await db.prepare(`SELECT * FROM packages WHERE id = ?`).get(topPkgId) as any;
 
   let pricingBreakdownText = "";
   if (prices.length > 0) {
@@ -309,10 +309,10 @@ export async function triageEnquiry(message: string, travellerName: string, enqu
   const extracted = extractEnquiryLocally(message);
 
   // 2. Compute package suggestions
-  const suggestedPackages = getPackageSuggestions(extracted, message);
+  const suggestedPackages = await getPackageSuggestions(extracted, message);
 
   // 3. Draft reply with verified database prices
-  const draftReply = generateDraftReply(travellerName, extracted, suggestedPackages);
+  const draftReply = await generateDraftReply(travellerName, extracted, suggestedPackages);
 
   // 4. Fixed template instant acknowledgment
   const acknowledgementTemplate = getInstantAcknowledgement(travellerName, enquiryId);

@@ -3,15 +3,15 @@ import { BlogsCmsClient } from "./BlogsCmsClient";
 import { hasRole } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
-initDatabase();
+await initDatabase();
 
 export default async function AdminBlogsPage() {
   if (!(await hasRole(["admin", "editor"]))) redirect("/admin");
-  const blogs = db.prepare(`
+  const blogs = await db.prepare(`
     SELECT * FROM blogs ORDER BY created_at DESC
   `).all() as any[];
 
-  const packages = db.prepare(`
+  const packages = await db.prepare(`
     SELECT id, title FROM packages ORDER BY id ASC
   `).all() as any[];
 

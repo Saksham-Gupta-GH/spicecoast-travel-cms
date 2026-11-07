@@ -3,7 +3,7 @@ import db, { initDatabase } from "@/lib/db";
 import { triageEnquiry } from "@/lib/ai-engine";
 import { hasRole } from "@/lib/auth";
 
-initDatabase();
+await initDatabase();
 
 export async function GET(request: Request) {
   if (!(await hasRole(["admin", "consultant"]))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
 
     query += ` ORDER BY e.created_at DESC`;
 
-    const enquiries = db.prepare(query).all(...params);
+    const enquiries = await db.prepare(query).all(...params);
 
     const parsed = enquiries.map((enq: any) => ({
       ...enq,
@@ -76,13 +76,13 @@ export async function POST(request: Request) {
     }
 
     // Auto-generate enquiry ID
-    const count = (db.prepare("SELECT COUNT(*) as c FROM enquiries").get() as any).c + 1;
+    const count = (await db.prepare("SELECT COUNT(*)::int as c FROM enquiries").get() as any).c + 1;
     const enquiryId = `ENQ-2026-${count.toString().padStart(3, "0")}`;
 
     // Execute AI Triage Pipeline
     const triageResult = await triageEnquiry(raw_message, traveller_name, enquiryId);
 
-    const insert = db.prepare(`
+    const insert = await db.prepare(`
       INSERT INTO enquiries (
         id, package_id, source, traveller_name, email, phone, raw_message,
         status, assigned_consultant_id, dpdp_consent_given,
@@ -119,7 +119,7 @@ export async function POST(request: Request) {
     });
 
     // Record activity
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO activity_logs (user_name, action, entity_type, entity_id, details)
       VALUES ('AI Automation', 'ENQUIRY_RECEIVED', 'enquiry', ?, ?)
     `).run(

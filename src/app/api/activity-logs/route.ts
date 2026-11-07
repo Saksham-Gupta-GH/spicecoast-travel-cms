@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
 import { hasRole } from "@/lib/auth";
 
-initDatabase();
+await initDatabase();
 
 export async function GET() {
   if (!(await hasRole(["admin"]))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   try {
-    const logs = db.prepare(`
+    const logs = await db.prepare(`
       SELECT * FROM activity_logs
       ORDER BY created_at DESC
       LIMIT 100

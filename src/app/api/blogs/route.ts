@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
 import { hasRole } from "@/lib/auth";
 
-initDatabase();
+await initDatabase();
 
 export async function GET(request: Request) {
   try {
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
 
     query += " ORDER BY created_at DESC";
 
-    const blogs = db.prepare(query).all(...params);
+    const blogs = await db.prepare(query).all(...params);
 
     const parsed = blogs.map((b: any) => ({
       ...b,
@@ -58,10 +58,10 @@ export async function POST(request: Request) {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
 
-    const count = (db.prepare("SELECT COUNT(*) as c FROM blogs").get() as any).c + 1;
+    const count = (await db.prepare("SELECT COUNT(*)::int as c FROM blogs").get() as any).c + 1;
     const id = `BLG-${count.toString().padStart(3, "0")}`;
 
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO blogs (
         id, slug, title, excerpt, content, category, featured_image, author,
         related_package_ids_json, seo_title, seo_description, status
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
       status,
     });
 
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO activity_logs (user_name, action, entity_type, entity_id, details)
       VALUES (?, 'BLOG_PUBLISHED', 'blog', ?, ?)
     `).run(author, id, `Published blog post: ${title} linking to packages: ${related_package_ids.join(", ")}`);

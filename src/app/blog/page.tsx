@@ -5,15 +5,15 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ChevronRight, User, Sparkles } from "lucide-react";
 
-initDatabase();
+await initDatabase();
 
 export const metadata = {
   title: "Kerala Travel Guides & Insider Blog | SpiceCoast Holidays",
   description: "Expert advice on Alleppey backwater houseboats, Munnar tea plantation trails, seasonal travel advice, and culture guides by Company A, Kochi.",
 };
 
-export default function BlogListPage() {
-  const blogs = db.prepare(`
+export default async function BlogListPage() {
+  const blogs = await db.prepare(`
     SELECT * FROM blogs
     WHERE status = 'published'
     ORDER BY created_at DESC

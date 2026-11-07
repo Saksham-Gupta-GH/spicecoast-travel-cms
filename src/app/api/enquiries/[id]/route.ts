@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
 import { hasRole } from "@/lib/auth";
 
-initDatabase();
+await initDatabase();
 
 export async function GET(
   request: Request,
@@ -11,7 +11,7 @@ export async function GET(
   if (!(await hasRole(["admin", "consultant"]))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   try {
     const { id } = await params;
-    const enquiry = db.prepare(`
+    const enquiry = await db.prepare(`
       SELECT e.*, p.title as package_title, p.slug as package_slug, u.name as consultant_name
       FROM enquiries e
       LEFT JOIN packages p ON e.package_id = p.id
@@ -27,7 +27,7 @@ export async function GET(
     let suggestedPackages: any[] = [];
     if (suggestedIds.length > 0) {
       const placeholders = suggestedIds.map(() => "?").join(",");
-      suggestedPackages = db.prepare(`
+      suggestedPackages = await db.prepare(`
         SELECT id, title, slug, duration_days, duration_nights, category, destination_summary
         FROM packages
         WHERE id IN (${placeholders})
@@ -56,7 +56,7 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
-    const existing = db.prepare("SELECT * FROM enquiries WHERE id = ?").get(id) as any;
+    const existing = await db.prepare("SELECT * FROM enquiries WHERE id = ?").get(id) as any;
     if (!existing) {
       return NextResponse.json({ success: false, error: "Enquiry not found" }, { status: 404 });
     }
@@ -82,7 +82,7 @@ export async function PUT(
       repliedAt = new Date().toISOString();
     }
 
-    db.prepare(`
+    await db.prepare(`
       UPDATE enquiries SET
         status = COALESCE(@status, status),
         assigned_consultant_id = COALESCE(@assigned_consultant_id, assigned_consultant_id),
@@ -118,12 +118,12 @@ export async function PUT(
 
     // Record activity
     if (mark_sent) {
-      db.prepare(`
+      await db.prepare(`
         INSERT INTO activity_logs (user_name, action, entity_type, entity_id, details)
         VALUES ('Mathew Varghese (Consultant)', 'REPLY_SENT', 'enquiry', ?, ?)
       `).run(id, `Approved and sent tailored reply to ${existing.traveller_name}`);
     } else {
-      db.prepare(`
+      await db.prepare(`
         INSERT INTO activity_logs (user_name, action, entity_type, entity_id, details)
         VALUES ('Consultant', 'ENQUIRY_UPDATED', 'enquiry', ?, ?)
       `).run(id, `Updated enquiry ${id}: status=${status || existing.status}, human_reviewed=${is_human_reviewed}`);

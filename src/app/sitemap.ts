@@ -1,13 +1,13 @@
 import { MetadataRoute } from "next";
 import db, { initDatabase } from "@/lib/db";
 
-initDatabase();
+await initDatabase();
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://spicecoast.in";
 
-  const packages = db.prepare("SELECT slug, updated_at FROM packages WHERE status = 'published'").all() as any[];
-  const blogs = db.prepare("SELECT slug, created_at FROM blogs WHERE status = 'published'").all() as any[];
+  const packages = await db.prepare("SELECT slug, updated_at FROM packages WHERE status = 'published'").all() as any[];
+  const blogs = await db.prepare("SELECT slug, created_at FROM blogs WHERE status = 'published'").all() as any[];
 
   const staticRoutes: MetadataRoute.Sitemap = [
     {

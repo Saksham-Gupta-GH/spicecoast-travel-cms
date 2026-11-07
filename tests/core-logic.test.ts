@@ -43,31 +43,31 @@ describe("1. AI Enquiry Extraction Logic", () => {
 });
 
 describe("2. Package Suggestion & Recommendation Scoring", () => {
-  test("Suggests PKG-KL-07 as #1 best fit for family + houseboat request", () => {
+  test("Suggests PKG-KL-07 as #1 best fit for family + houseboat request", async () => {
     const rawMessage = "2 adults and 1 kid, Kerala 5-6 nights in December, budget around 1.2 lakh total, houseboat a must";
     const extracted = extractEnquiryLocally(rawMessage);
-    const suggestions = getPackageSuggestions(extracted, rawMessage);
+    const suggestions = await getPackageSuggestions(extracted, rawMessage);
 
     assert.equal(suggestions.length, 3, "Should return top 3 package suggestions");
     assert.equal(suggestions[0].id, "PKG-KL-07", "Top recommendation must be PKG-KL-07");
     assert.match(suggestions[0].matchReason, /houseboat/i, "Match reason should reference houseboat");
   });
 
-  test("Suggests PKG-SI-12 for pilgrim/temple inquiries", () => {
+  test("Suggests PKG-SI-12 for pilgrim/temple inquiries", async () => {
     const rawMessage = "Temple heritage tour for Madurai and Rameswaram";
     const extracted = extractEnquiryLocally(rawMessage);
-    const suggestions = getPackageSuggestions(extracted, rawMessage);
+    const suggestions = await getPackageSuggestions(extracted, rawMessage);
 
     assert.equal(suggestions[0].id, "PKG-SI-12", "Top recommendation must be PKG-SI-12");
   });
 });
 
 describe("3. Strict Pricing Integrity (Zero Hallucinations)", () => {
-  test("Draft reply uses prices directly from seasonal_prices table", () => {
+  test("Draft reply uses prices directly from seasonal_prices table", async () => {
     const rawMessage = "2 adults and 1 kid, Kerala 5-6 nights in December, budget around 1.2 lakh total, houseboat a must";
     const extracted = extractEnquiryLocally(rawMessage);
-    const suggestions = getPackageSuggestions(extracted, rawMessage);
-    const reply = generateDraftReply("Rahul Sharma", extracted, suggestions);
+    const suggestions = await getPackageSuggestions(extracted, rawMessage);
+    const reply = await generateDraftReply("Rahul Sharma", extracted, suggestions);
 
     // Verify Peak Season price ₹32,500 and Monsoon ₹24,900 from database are present
     assert.match(reply, /32,500/, "Draft must include database Deluxe Peak price ₹32,500");
@@ -87,23 +87,23 @@ describe("4. Instant Acknowledgement SLA", () => {
 });
 
 describe("5. Package Versioning & Rollback Integrity", () => {
-  test("Package version increments and snapshot is recorded", () => {
-    const initialPkg = db.prepare("SELECT current_version FROM packages WHERE id = 'PKG-KL-07'").get() as any;
+  test("Package version increments and snapshot is recorded", async () => {
+    const initialPkg = await db.prepare("SELECT current_version FROM packages WHERE id = 'PKG-KL-07'").get() as any;
     const initialVer = initialPkg.current_version;
 
     // Simulate CMS edit
     const newVer = initialVer + 1;
-    db.prepare("UPDATE packages SET current_version = ? WHERE id = 'PKG-KL-07'").run(newVer);
-    db.prepare(`
+    await db.prepare("UPDATE packages SET current_version = ? WHERE id = 'PKG-KL-07'").run(newVer);
+    await db.prepare(`
       INSERT INTO package_versions (package_id, version_number, snapshot_json, change_summary, created_by)
       VALUES ('PKG-KL-07', ?, '{"test": true}', 'Unit test edit', 'test_runner')
     `).run(newVer);
 
-    const updatedPkg = db.prepare("SELECT current_version FROM packages WHERE id = 'PKG-KL-07'").get() as any;
+    const updatedPkg = await db.prepare("SELECT current_version FROM packages WHERE id = 'PKG-KL-07'").get() as any;
     assert.equal(updatedPkg.current_version, newVer, "Version number must increment");
 
     // Clean up to keep db consistent
-    db.prepare("UPDATE packages SET current_version = ? WHERE id = 'PKG-KL-07'").run(initialVer);
-    db.prepare("DELETE FROM package_versions WHERE package_id = 'PKG-KL-07' AND version_number = ?").run(newVer);
+    await db.prepare("UPDATE packages SET current_version = ? WHERE id = 'PKG-KL-07'").run(initialVer);
+    await db.prepare("DELETE FROM package_versions WHERE package_id = 'PKG-KL-07' AND version_number = ?").run(newVer);
   });
 });

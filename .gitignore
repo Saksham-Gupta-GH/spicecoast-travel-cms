@@ -20,7 +20,7 @@
 # production
 /build
 
-# local SQLite runtime files (the app seeds a fresh database automatically)
+# legacy local database artifacts from the pre-PostgreSQL prototype
 spicecoast.db
 spicecoast.db-shm
 spicecoast.db-wal
@@ -37,6 +37,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel

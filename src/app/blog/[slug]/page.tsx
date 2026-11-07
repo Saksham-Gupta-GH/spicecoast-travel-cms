@@ -6,11 +6,11 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ChevronRight, ArrowRight, User, Sparkles, Compass } from "lucide-react";
 
-initDatabase();
+await initDatabase();
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const blog = db.prepare("SELECT * FROM blogs WHERE slug = ?").get(slug) as any;
+  const blog = await db.prepare("SELECT * FROM blogs WHERE slug = ?").get(slug) as any;
 
   if (!blog) return { title: "Blog Not Found" };
 
@@ -23,14 +23,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function BlogDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  const blog = db.prepare("SELECT * FROM blogs WHERE slug = ?").get(slug) as any;
+  const blog = await db.prepare("SELECT * FROM blogs WHERE slug = ?").get(slug) as any;
   if (!blog) notFound();
 
   const relatedIds = JSON.parse(blog.related_package_ids_json || "[]");
   let relatedPackages: any[] = [];
   if (relatedIds.length > 0) {
     const placeholders = relatedIds.map(() => "?").join(",");
-    relatedPackages = db.prepare(`
+    relatedPackages = await db.prepare(`
       SELECT p.*, MIN(sp.deluxe_price_pp) as min_deluxe_price
       FROM packages p
       LEFT JOIN seasonal_prices sp ON p.id = sp.package_id

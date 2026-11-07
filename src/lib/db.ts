@@ -1,19 +1,86 @@
-import Database from "better-sqlite3";
-import path from "path";
-import fs from "fs";
+import { Pool } from "pg";
 
-const dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), "spicecoast.db");
+type QueryParameters = unknown[] | Record<string, unknown>;
 
-// Production hosts can mount a persistent volume and point DATABASE_PATH at it.
-fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-const db = new Database(dbPath);
+function compileQuery(sql: string, parameters: QueryParameters = []) {
+  if (Array.isArray(parameters)) {
+    let index = 0;
+    return {
+      text: sql.replace(/\?/g, () => `$${++index}`),
+      values: parameters,
+    };
+  }
 
-// Enable foreign keys and WAL mode for high concurrency
-db.pragma("foreign_keys = ON");
-db.pragma("journal_mode = WAL");
+  const values: unknown[] = [];
+  return {
+    text: sql.replace(/@([A-Za-z_][A-Za-z0-9_]*)/g, (_match, key: string) => {
+      values.push(parameters[key]);
+      return `$${values.length}`;
+    }),
+    values,
+  };
+}
+
+const globalForDatabase = globalThis as unknown as { spicecoastPool?: Pool };
+
+function createPool() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL is required. See deployment.md for local and Neon setup.");
+  }
+
+  return new Pool({
+    connectionString,
+    max: process.env.VERCEL ? 1 : 5,
+    idleTimeoutMillis: 20_000,
+    connectionTimeoutMillis: 10_000,
+  });
+}
+
+const pool = globalForDatabase.spicecoastPool ?? createPool();
+if (process.env.NODE_ENV !== "production") globalForDatabase.spicecoastPool = pool;
+
+const db = {
+  async exec(sql: string) {
+    await pool.query(sql);
+  },
+  prepare(sql: string) {
+    const query = async (parameters: QueryParameters = []) => {
+      const compiled = compileQuery(sql, parameters);
+      return pool.query(compiled.text, compiled.values);
+    };
+
+    const normalize = (args: unknown[]): QueryParameters => {
+      if (args.length === 1 && args[0] && typeof args[0] === "object" && !Array.isArray(args[0])) {
+        return args[0] as Record<string, unknown>;
+      }
+      return args;
+    };
+
+    return {
+      async all(...args: unknown[]) {
+        return (await query(normalize(args))).rows;
+      },
+      async get(...args: unknown[]) {
+        return (await query(normalize(args))).rows[0];
+      },
+      async run(...args: unknown[]) {
+        const result = await query(normalize(args));
+        return { changes: result.rowCount ?? 0 };
+      },
+    };
+  },
+};
+
+let initializationPromise: Promise<void> | undefined;
 
 export function initDatabase() {
-  db.exec(`
+  initializationPromise ??= initializeDatabase();
+  return initializationPromise;
+}
+
+async function initializeDatabase() {
+  await db.exec(`
     -- Users & Staff
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
@@ -21,7 +88,7 @@ export function initDatabase() {
       email TEXT UNIQUE NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('admin', 'editor', 'consultant', 'traveller')),
       avatar TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
 
     -- Packages (Public + CMS)
@@ -46,18 +113,18 @@ export function initDatabase() {
       status TEXT NOT NULL CHECK(status IN ('published', 'draft', 'scheduled')),
       current_version INTEGER NOT NULL DEFAULT 1,
       created_by TEXT NOT NULL,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
 
     -- Package Version History (for rollback, audit, and diffing)
     CREATE TABLE IF NOT EXISTS package_versions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id BIGSERIAL PRIMARY KEY,
       package_id TEXT NOT NULL,
       version_number INTEGER NOT NULL,
       snapshot_json TEXT NOT NULL,
       change_summary TEXT NOT NULL,
       created_by TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (package_id) REFERENCES packages(id) ON DELETE CASCADE
     );
 
@@ -118,11 +185,11 @@ export function initDatabase() {
       suggested_package_ids_json TEXT, -- JSON array of package IDs
       ai_draft_reply TEXT,
       final_reply TEXT,
-      replied_at DATETIME,
+      replied_at TIMESTAMPTZ,
 
       internal_notes TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (package_id) REFERENCES packages(id) ON DELETE SET NULL,
       FOREIGN KEY (assigned_consultant_id) REFERENCES users(id) ON DELETE SET NULL
     );
@@ -148,7 +215,7 @@ export function initDatabase() {
       notes TEXT,
       status TEXT NOT NULL CHECK(status IN ('Draft', 'Sent', 'Accepted', 'Expired')),
       created_by TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (enquiry_id) REFERENCES enquiries(id) ON DELETE SET NULL,
       FOREIGN KEY (package_id) REFERENCES packages(id) ON DELETE CASCADE
     );
@@ -167,36 +234,36 @@ export function initDatabase() {
       seo_title TEXT NOT NULL,
       seo_description TEXT NOT NULL,
       status TEXT NOT NULL CHECK(status IN ('published', 'draft')),
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
 
     -- Activity & Audit Logs
     CREATE TABLE IF NOT EXISTS activity_logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id BIGSERIAL PRIMARY KEY,
       user_id TEXT,
       user_name TEXT NOT NULL,
       action TEXT NOT NULL,
       entity_type TEXT NOT NULL,
       entity_id TEXT NOT NULL,
       details TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
 
     -- 301 Redirects Table (for 140 old URLs legacy migration requirement)
     CREATE TABLE IF NOT EXISTS redirects (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id BIGSERIAL PRIMARY KEY,
       old_path TEXT UNIQUE NOT NULL,
       new_path TEXT NOT NULL,
       status_code INTEGER DEFAULT 301
     );
   `);
 
-  seedInitialData();
+  await seedInitialData();
 }
 
-function seedInitialData() {
-  const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
-  if (userCount.count > 0) return; // already seeded
+async function seedInitialData() {
+  const userCount = await db.prepare("SELECT COUNT(*)::int as count FROM users").get() as { count: number };
+  if (userCount.count > 0) return;
 
   console.log("Seeding fresh data for Company A, Kochi...");
 
@@ -206,7 +273,7 @@ function seedInitialData() {
     VALUES (@id, @name, @email, @role, @avatar)
   `);
 
-  insertUser.run({
+  await insertUser.run({
     id: "usr_admin",
     name: "Jawahar Kurian (Founder & MD)",
     email: "admin@spicecoast.in",
@@ -214,7 +281,7 @@ function seedInitialData() {
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
   });
 
-  insertUser.run({
+  await insertUser.run({
     id: "usr_editor",
     name: "Ananya Pillai (Content Editor)",
     email: "editor@spicecoast.in",
@@ -222,7 +289,7 @@ function seedInitialData() {
     avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
   });
 
-  insertUser.run({
+  await insertUser.run({
     id: "usr_consultant",
     name: "Mathew Varghese (Senior Tour Consultant)",
     email: "consultant@spicecoast.in",
@@ -246,7 +313,7 @@ function seedInitialData() {
   `);
 
   // Package 1: PKG-KL-07 (Directly from brief)
-  insertPkg.run({
+  await insertPkg.run({
     id: "PKG-KL-07",
     slug: "munnar-thekkady-alleppey-houseboat",
     title: "Munnar Tea Hills, Thekkady Wilds & Alleppey Houseboat",
@@ -286,7 +353,7 @@ function seedInitialData() {
   });
 
   // Package 2: PKG-SI-12 (Directly from brief)
-  insertPkg.run({
+  await insertPkg.run({
     id: "PKG-SI-12",
     slug: "madurai-rameswaram-kanyakumari-pilgrim",
     title: "Madurai, Rameswaram & Kanyakumari Sacred Southern Circuit",
@@ -323,7 +390,7 @@ function seedInitialData() {
   });
 
   // Package 3: PKG-KL-03 (Honeymoon & Backwater Luxury)
-  insertPkg.run({
+  await insertPkg.run({
     id: "PKG-KL-03",
     slug: "wayanad-misty-hills-luxury-retreat",
     title: "Wayanad Rainforest & Cloud-Capped Coffee Plantations",
@@ -358,7 +425,7 @@ function seedInitialData() {
   });
 
   // Package 4: PKG-KL-09 (South Kerala Heritage & Marari Beach)
-  insertPkg.run({
+  await insertPkg.run({
     id: "PKG-KL-09",
     slug: "kerala-grand-heritage-backwaters-beach",
     title: "Grand Kerala Panorama: Fort Kochi, Kumarakom & Marari Beach",
@@ -404,7 +471,7 @@ function seedInitialData() {
   `);
 
   // PKG-KL-07 Pricing
-  insertPrice.run({
+  await insertPrice.run({
     id: "PRC-KL07-PEAK",
     package_id: "PKG-KL-07",
     season_name: "Peak Season (Winter & Holidays)",
@@ -418,7 +485,7 @@ function seedInitialData() {
     note: "Per person on twin sharing basis. Includes 5% GST and holiday surcharges.",
   });
 
-  insertPrice.run({
+  await insertPrice.run({
     id: "PRC-KL07-REG",
     package_id: "PKG-KL-07",
     season_name: "Regular Season (Spring & Autumn)",
@@ -432,7 +499,7 @@ function seedInitialData() {
     note: "Per person on twin sharing basis. Includes 5% GST.",
   });
 
-  insertPrice.run({
+  await insertPrice.run({
     id: "PRC-KL07-MONSOON",
     package_id: "PKG-KL-07",
     season_name: "Monsoon Season (Ayurveda Special)",
@@ -447,7 +514,7 @@ function seedInitialData() {
   });
 
   // PKG-SI-12 Pricing (Madurai circuit)
-  insertPrice.run({
+  await insertPrice.run({
     id: "PRC-SI12-STD",
     package_id: "PKG-SI-12",
     season_name: "All-Year Pilgrim Season",
@@ -462,7 +529,7 @@ function seedInitialData() {
   });
 
   // PKG-KL-03 Pricing (Wayanad)
-  insertPrice.run({
+  await insertPrice.run({
     id: "PRC-KL03-STD",
     package_id: "PKG-KL-03",
     season_name: "High Season (Autumn to Summer)",
@@ -477,7 +544,7 @@ function seedInitialData() {
   });
 
   // PKG-KL-09 Pricing (Panorama)
-  insertPrice.run({
+  await insertPrice.run({
     id: "PRC-KL09-PEAK",
     package_id: "PKG-KL-09",
     season_name: "Peak Season (Winter)",
@@ -500,7 +567,7 @@ function seedInitialData() {
     )
   `);
 
-  insertDay.run({
+  await insertDay.run({
     id: "ITN-KL07-D1",
     package_id: "PKG-KL-07",
     day_number: 1,
@@ -511,7 +578,7 @@ function seedInitialData() {
     activity_tags_json: JSON.stringify(["Airport Pickup", "Waterfall Sightseeing", "Tea Hills"]),
   });
 
-  insertDay.run({
+  await insertDay.run({
     id: "ITN-KL07-D2",
     package_id: "PKG-KL-07",
     day_number: 2,
@@ -522,7 +589,7 @@ function seedInitialData() {
     activity_tags_json: JSON.stringify(["Nilgiri Tahr Safari", "Tea Tasting", "Boating at Mattupetty"]),
   });
 
-  insertDay.run({
+  await insertDay.run({
     id: "ITN-KL07-D3",
     package_id: "PKG-KL-07",
     day_number: 3,
@@ -533,7 +600,7 @@ function seedInitialData() {
     activity_tags_json: JSON.stringify(["Spice Plantation", "Kalaripayattu Show", "Periyar Wildlife"]),
   });
 
-  insertDay.run({
+  await insertDay.run({
     id: "ITN-KL07-D4",
     package_id: "PKG-KL-07",
     day_number: 4,
@@ -544,7 +611,7 @@ function seedInitialData() {
     activity_tags_json: JSON.stringify(["Houseboat Cruise", "Authentic Kerala Cuisine", "Sunset Over Backwaters"]),
   });
 
-  insertDay.run({
+  await insertDay.run({
     id: "ITN-KL07-D5",
     package_id: "PKG-KL-07",
     day_number: 5,
@@ -555,7 +622,7 @@ function seedInitialData() {
     activity_tags_json: JSON.stringify(["Chinese Fishing Nets", "Jew Town & Synagogue", "Dutch Palace"]),
   });
 
-  insertDay.run({
+  await insertDay.run({
     id: "ITN-KL07-D6",
     package_id: "PKG-KL-07",
     day_number: 6,
@@ -575,7 +642,7 @@ function seedInitialData() {
     )
   `);
 
-  insertVersion.run({
+  await insertVersion.run({
     package_id: "PKG-KL-07",
     version_number: 1,
     snapshot_json: JSON.stringify({
@@ -610,7 +677,7 @@ function seedInitialData() {
   `);
 
   // Enquiry 1: Exact brief sample enquiry
-  insertEnquiry.run({
+  await insertEnquiry.run({
     id: "ENQ-2026-001",
     package_id: "PKG-KL-07",
     source: "web_form",
@@ -636,7 +703,7 @@ function seedInitialData() {
   });
 
   // Enquiry 2: WhatsApp enquiry
-  insertEnquiry.run({
+  await insertEnquiry.run({
     id: "ENQ-2026-002",
     package_id: null,
     source: "whatsapp",
@@ -662,7 +729,7 @@ function seedInitialData() {
   });
 
   // Enquiry 3: Foreign group enquiry via Email
-  insertEnquiry.run({
+  await insertEnquiry.run({
     id: "ENQ-2026-003",
     package_id: "PKG-SI-12",
     source: "email",
@@ -700,7 +767,7 @@ function seedInitialData() {
     )
   `);
 
-  insertQuote.run({
+  await insertQuote.run({
     id: "QUO-2026-8819",
     enquiry_id: "ENQ-2026-003",
     package_id: "PKG-SI-12",
@@ -733,7 +800,7 @@ function seedInitialData() {
     )
   `);
 
-  insertBlog.run({
+  await insertBlog.run({
     id: "BLG-001",
     slug: "alleppey-houseboat-guide-first-timers",
     title: "Everything You Must Know Before Booking an Alleppey Houseboat Cruise",
@@ -760,7 +827,7 @@ If you want to seamlessly combine Munnar's mountain breezes with a night on the 
     status: "published",
   });
 
-  insertBlog.run({
+  await insertBlog.run({
     id: "BLG-002",
     slug: "munnar-tea-gardens-best-time-to-visit",
     title: "The Magic of Munnar: Best Months, Hidden Viewpoints & Tea Trail Secrets",
@@ -796,7 +863,7 @@ Explore our curated Munnar itineraries with dedicated chauffeur-driven private v
   ];
 
   for (const r of oldUrls) {
-    insertRedirect.run({ old_path: r.old, new_path: r.target, status_code: 301 });
+    await insertRedirect.run({ old_path: r.old, new_path: r.target, status_code: 301 });
   }
 
   // Seed Activity Log
@@ -805,7 +872,7 @@ Explore our curated Munnar itineraries with dedicated chauffeur-driven private v
     VALUES (@user_id, @user_name, @action, @entity_type, @entity_id, @details)
   `);
 
-  insertActivity.run({
+  await insertActivity.run({
     user_id: "usr_admin",
     user_name: "Jawahar Kurian",
     action: "PACKAGE_PUBLISH",
@@ -814,7 +881,7 @@ Explore our curated Munnar itineraries with dedicated chauffeur-driven private v
     details: "Published Munnar, Thekkady & Alleppey Houseboat with 2026-27 Peak, Regular, and Monsoon seasonal rates.",
   });
 
-  insertActivity.run({
+  await insertActivity.run({
     user_id: "usr_consultant",
     user_name: "Mathew Varghese",
     action: "ENQUIRY_TRIAGE",

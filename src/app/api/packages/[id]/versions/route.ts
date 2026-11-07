@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
 import { hasRole } from "@/lib/auth";
 
-initDatabase();
+await initDatabase();
 
 export async function GET(
   request: Request,
@@ -11,7 +11,7 @@ export async function GET(
   if (!(await hasRole(["admin", "editor"]))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   try {
     const { id } = await params;
-    const versions = db.prepare(`
+    const versions = await db.prepare(`
       SELECT * FROM package_versions
       WHERE package_id = ?
       ORDER BY version_number DESC
@@ -33,7 +33,7 @@ export async function POST(
     const { id } = await params;
     const { version_id } = await request.json();
 
-    const versionRecord = db.prepare(`
+    const versionRecord = await db.prepare(`
       SELECT * FROM package_versions
       WHERE package_id = ? AND (id = ? OR version_number = ?)
     `).get(id, version_id, version_id) as any;
@@ -43,10 +43,10 @@ export async function POST(
     }
 
     const snapshot = JSON.parse(versionRecord.snapshot_json);
-    const existing = db.prepare("SELECT * FROM packages WHERE id = ?").get(id) as any;
+    const existing = await db.prepare("SELECT * FROM packages WHERE id = ?").get(id) as any;
     const restoredVersionNum = (existing.current_version || 1) + 1;
 
-    db.prepare(`
+    await db.prepare(`
       UPDATE packages SET
         title = COALESCE(?, title),
         tagline = COALESCE(?, tagline),
@@ -77,7 +77,7 @@ export async function POST(
     );
 
     // Save a new version node reflecting the rollback
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO package_versions (package_id, version_number, snapshot_json, change_summary, created_by)
       VALUES (?, ?, ?, ?, 'usr_admin')
     `).run(
@@ -87,7 +87,7 @@ export async function POST(
       `Rolled back to Version ${versionRecord.version_number}`
     );
 
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO activity_logs (user_name, action, entity_type, entity_id, details)
       VALUES ('Admin', 'PACKAGE_ROLLBACK', 'package', ?, ?)
     `).run(id, `Restored ${id} to historical state from Version ${versionRecord.version_number}`);

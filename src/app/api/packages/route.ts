@@ -3,7 +3,7 @@ import db, { initDatabase } from "@/lib/db";
 import { hasRole } from "@/lib/auth";
 
 // Ensure DB is ready
-initDatabase();
+await initDatabase();
 
 export async function GET(request: Request) {
   try {
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
 
     query += ` GROUP BY p.id ORDER BY p.updated_at DESC`;
 
-    const packages = db.prepare(query).all(...params);
+    const packages = await db.prepare(query).all(...params);
 
     // Parse JSON fields
     const parsed = packages.map((pkg: any) => ({
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
     }
 
     // Auto-generate ID & slug
-    const count = (db.prepare("SELECT COUNT(*) as c FROM packages").get() as any).c + 1;
+    const count = (await db.prepare("SELECT COUNT(*)::int as c FROM packages").get() as any).c + 1;
     const id = `PKG-KL-${count.toString().padStart(2, "0")}`;
     const slug = title
       .toLowerCase()
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
       )
     `);
 
-    insertPkg.run({
+    await insertPkg.run({
       id,
       slug,
       title,
@@ -147,7 +147,7 @@ export async function POST(request: Request) {
         )
       `);
 
-      seasonal_prices.forEach((sp: any, idx: number) => {
+      await Promise.all(seasonal_prices.map((sp: any, idx: number) =>
         insertPrice.run({
           id: `PRC-${id}-${idx + 1}`,
           package_id: id,
@@ -159,18 +159,18 @@ export async function POST(request: Request) {
           deluxe_price_pp: parseInt(sp.deluxe_price_pp, 10) || 25000,
           luxury_price_pp: parseInt(sp.luxury_price_pp, 10) || 35000,
           note: sp.note || "Per person basis on twin sharing, includes 5% GST",
-        });
-      });
+        })
+      ));
     }
 
     // Save initial version snapshot
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO package_versions (package_id, version_number, snapshot_json, change_summary, created_by)
       VALUES (?, 1, ?, 'Initial package creation via CMS', ?)
     `).run(id, JSON.stringify(body), created_by);
 
     // Activity log
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO activity_logs (user_id, user_name, action, entity_type, entity_id, details)
       VALUES (?, 'CMS User', 'PACKAGE_CREATE', 'package', ?, ?)
     `).run(created_by, id, `Created new package: ${title} (${id})`);

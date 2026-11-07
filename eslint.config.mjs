@@ -6,8 +6,8 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
-    // SQLite query rows are dynamically shaped at runtime. Tight domain types are
-    // introduced around public boundaries while legacy query adapters remain broad.
+    // Database query rows are dynamically shaped at runtime. Tight domain types are
+    // introduced around public boundaries while the compatibility adapter stays broad.
     rules: { "@typescript-eslint/no-explicit-any": "off" },
   },
   // Override default ignores of eslint-config-next.

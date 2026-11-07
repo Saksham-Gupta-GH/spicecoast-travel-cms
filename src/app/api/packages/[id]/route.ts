@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
 import { hasRole } from "@/lib/auth";
 
-initDatabase();
+await initDatabase();
 
 export async function GET(
   request: Request,
@@ -13,7 +13,7 @@ export async function GET(
     const { id } = await params;
 
     // Search by ID or slug
-    const pkg = db.prepare(`
+    const pkg = await db.prepare(`
       SELECT * FROM packages
       WHERE id = ? OR slug = ?
     `).get(id, id) as any;
@@ -22,19 +22,19 @@ export async function GET(
       return NextResponse.json({ success: false, error: "Package not found" }, { status: 404 });
     }
 
-    const seasonalPrices = db.prepare(`
+    const seasonalPrices = await db.prepare(`
       SELECT * FROM seasonal_prices
       WHERE package_id = ?
       ORDER BY standard_price_pp ASC
     `).all(pkg.id);
 
-    const itinerary = db.prepare(`
+    const itinerary = await db.prepare(`
       SELECT * FROM itinerary_days
       WHERE package_id = ?
       ORDER BY day_number ASC
     `).all(pkg.id);
 
-    const versions = db.prepare(`
+    const versions = await db.prepare(`
       SELECT id, version_number, change_summary, created_by, created_at
       FROM package_versions
       WHERE package_id = ?
@@ -71,7 +71,7 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
-    const existing = db.prepare("SELECT * FROM packages WHERE id = ?").get(id) as any;
+    const existing = await db.prepare("SELECT * FROM packages WHERE id = ?").get(id) as any;
     if (!existing) {
       return NextResponse.json({ success: false, error: "Package not found" }, { status: 404 });
     }
@@ -81,7 +81,7 @@ export async function PUT(
     const changeSummary = body.change_summary || "Updated package details and pricing via CMS";
 
     // Update package table
-    db.prepare(`
+    await db.prepare(`
       UPDATE packages SET
         title = COALESCE(@title, title),
         tagline = COALESCE(@tagline, tagline),
@@ -125,7 +125,7 @@ export async function PUT(
 
     // If seasonal prices provided, update them
     if (Array.isArray(body.seasonal_prices)) {
-      db.prepare("DELETE FROM seasonal_prices WHERE package_id = ?").run(id);
+      await db.prepare("DELETE FROM seasonal_prices WHERE package_id = ?").run(id);
       const insertPrice = db.prepare(`
         INSERT INTO seasonal_prices (
           id, package_id, season_name, period_label, start_month, end_month,
@@ -136,7 +136,7 @@ export async function PUT(
         )
       `);
 
-      body.seasonal_prices.forEach((sp: any, idx: number) => {
+      await Promise.all(body.seasonal_prices.map((sp: any, idx: number) =>
         insertPrice.run({
           id: sp.id || `PRC-${id}-${idx + 1}-${Date.now().toString().slice(-4)}`,
           package_id: id,
@@ -148,18 +148,18 @@ export async function PUT(
           deluxe_price_pp: parseInt(sp.deluxe_price_pp, 10),
           luxury_price_pp: parseInt(sp.luxury_price_pp, 10),
           note: sp.note || "Per person basis on twin sharing, includes 5% GST",
-        });
-      });
+        })
+      ));
     }
 
     // Save version history snapshot
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO package_versions (package_id, version_number, snapshot_json, change_summary, created_by)
       VALUES (?, ?, ?, ?, ?)
     `).run(id, newVersion, JSON.stringify(body), changeSummary, updatedBy);
 
     // Activity Log
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO activity_logs (user_id, user_name, action, entity_type, entity_id, details)
       VALUES (?, 'CMS User', 'PACKAGE_UPDATE', 'package', ?, ?)
     `).run(updatedBy, id, `Updated ${existing.title} to version ${newVersion}: ${changeSummary}`);
@@ -177,8 +177,8 @@ export async function DELETE(
   if (!(await hasRole(["admin"]))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   try {
     const { id } = await params;
-    db.prepare("DELETE FROM packages WHERE id = ?").run(id);
-    db.prepare(`
+    await db.prepare("DELETE FROM packages WHERE id = ?").run(id);
+    await db.prepare(`
       INSERT INTO activity_logs (user_name, action, entity_type, entity_id, details)
       VALUES ('Staff', 'PACKAGE_DELETE', 'package', ?, 'Package removed from CMS')
     `).run(id);

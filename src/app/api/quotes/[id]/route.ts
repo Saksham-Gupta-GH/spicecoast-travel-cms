@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
 
-initDatabase();
+await initDatabase();
 
 export async function GET(
   request: Request,
@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const quote = db.prepare(`
+    const quote = await db.prepare(`
       SELECT q.*, p.title as package_title, p.slug as package_slug,
              p.destination_summary, p.duration_days, p.duration_nights,
              p.inclusions_json, p.exclusions_json, p.hotel_standard_name,

@@ -2,11 +2,11 @@ import db, { initDatabase } from "@/lib/db";
 import { hasRole } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
-initDatabase();
+await initDatabase();
 
 export default async function AdminLogsPage() {
   if (!(await hasRole(["admin"]))) redirect("/admin");
-  const logs = db.prepare(`
+  const logs = await db.prepare(`
     SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 100
   `).all() as any[];
 

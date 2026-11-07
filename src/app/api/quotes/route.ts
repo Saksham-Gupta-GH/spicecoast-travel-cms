@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
 import { hasRole } from "@/lib/auth";
 
-initDatabase();
+await initDatabase();
 
 export async function GET() {
   if (!(await hasRole(["admin", "consultant"]))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   try {
-    const quotes = db.prepare(`
+    const quotes = await db.prepare(`
       SELECT q.*, p.title as package_title
       FROM quotes q
       LEFT JOIN packages p ON q.package_id = p.id
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 });
     }
 
-    const pkg = db.prepare("SELECT * FROM packages WHERE id = ?").get(package_id) as any;
+    const pkg = await db.prepare("SELECT * FROM packages WHERE id = ?").get(package_id) as any;
     if (!pkg) {
       return NextResponse.json({ success: false, error: "Package not found" }, { status: 404 });
     }
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     // Determine price per person from price table if not overridden
     let pricePP = custom_price_pp;
     if (!pricePP) {
-      const priceRow = db.prepare(`
+      const priceRow = await db.prepare(`
         SELECT * FROM seasonal_prices
         WHERE package_id = ?
         LIMIT 1
@@ -75,11 +75,11 @@ export async function POST(request: Request) {
     const subtotal = Math.round(totalWithGst / 1.05);
     const gstAmount = totalWithGst - subtotal;
 
-    const count = (db.prepare("SELECT COUNT(*) as c FROM quotes").get() as any).c + 1;
+    const count = (await db.prepare("SELECT COUNT(*)::int as c FROM quotes").get() as any).c + 1;
     const quoteId = `QUO-2026-${count.toString().padStart(4, "0")}`;
     const quoteNumber = `SCH-2026-Q${count.toString().padStart(4, "0")}`;
 
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO quotes (
         id, enquiry_id, package_id, quote_number, traveller_name, email, phone,
         travel_date, adults_count, kids_count, selected_tier, price_per_person,
@@ -112,10 +112,10 @@ export async function POST(request: Request) {
 
     // If linked to enquiry, update enquiry status to Quoted
     if (enquiry_id) {
-      db.prepare(`UPDATE enquiries SET status = 'Quoted' WHERE id = ?`).run(enquiry_id);
+      await db.prepare(`UPDATE enquiries SET status = 'Quoted' WHERE id = ?`).run(enquiry_id);
     }
 
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO activity_logs (user_name, action, entity_type, entity_id, details)
       VALUES ('Mathew Varghese', 'QUOTE_CREATED', 'quote', ?, ?)
     `).run(quoteId, `Generated official quote #${quoteNumber} for ${traveller_name} (Total: ₹${totalWithGst.toLocaleString("en-IN")})`);

@@ -16,12 +16,12 @@ import {
   Star,
 } from "lucide-react";
 
-initDatabase();
+await initDatabase();
 
 export const revalidate = 60; // fast server-side cache
 
-export default function HomePage() {
-  const packages = db.prepare(`
+export default async function HomePage() {
+  const packages = await db.prepare(`
     SELECT p.*,
       MIN(sp.deluxe_price_pp) as min_price,
       MIN(sp.standard_price_pp) as min_standard_price
@@ -41,7 +41,7 @@ export default function HomePage() {
     exclusions: JSON.parse(pkg.exclusions_json || "[]"),
   }));
 
-  const blogs = db.prepare(`
+  const blogs = await db.prepare(`
     SELECT * FROM blogs
     WHERE status = 'published'
     ORDER BY created_at DESC

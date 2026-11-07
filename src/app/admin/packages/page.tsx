@@ -3,11 +3,11 @@ import { PackagesCmsClient } from "./PackagesCmsClient";
 import { hasRole } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
-initDatabase();
+await initDatabase();
 
 export default async function PackagesAdminPage() {
   if (!(await hasRole(["admin", "editor"]))) redirect("/admin");
-  const packages = db.prepare(`
+  const packages = await db.prepare(`
     SELECT p.*,
       MIN(sp.deluxe_price_pp) as min_deluxe_price,
       MIN(sp.standard_price_pp) as min_standard_price
@@ -17,12 +17,12 @@ export default async function PackagesAdminPage() {
     ORDER BY p.updated_at DESC
   `).all() as any[];
 
-  const parsedPackages = packages.map((pkg) => {
-    const seasonalPrices = db.prepare(`
+  const parsedPackages = await Promise.all(packages.map(async (pkg) => {
+    const seasonalPrices = await db.prepare(`
       SELECT * FROM seasonal_prices WHERE package_id = ? ORDER BY standard_price_pp ASC
     `).all(pkg.id);
 
-    const versions = db.prepare(`
+    const versions = await db.prepare(`
       SELECT * FROM package_versions WHERE package_id = ? ORDER BY version_number DESC
     `).all(pkg.id);
 
@@ -35,7 +35,7 @@ export default async function PackagesAdminPage() {
       seasonal_prices: seasonalPrices,
       versions,
     };
-  });
+  }));
 
   return <PackagesCmsClient initialPackages={parsedPackages} />;
 }

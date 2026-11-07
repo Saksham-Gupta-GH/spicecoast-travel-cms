@@ -3,11 +3,11 @@ import { EnquiriesInboxClient } from "./EnquiriesInboxClient";
 import { hasRole } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
-initDatabase();
+await initDatabase();
 
 export default async function EnquiriesPage() {
   if (!(await hasRole(["admin", "consultant"]))) redirect("/admin");
-  const enquiries = db.prepare(`
+  const enquiries = await db.prepare(`
     SELECT e.*, p.title as package_title, p.slug as package_slug, u.name as consultant_name
     FROM enquiries e
     LEFT JOIN packages p ON e.package_id = p.id
@@ -21,7 +21,7 @@ export default async function EnquiriesPage() {
     human_corrections: enq.human_corrections_json ? JSON.parse(enq.human_corrections_json) : null,
   }));
 
-  const allPackages = db.prepare(`
+  const allPackages = await db.prepare(`
     SELECT p.id, p.title, p.slug, p.category, p.duration_days, p.destination_summary,
       MIN(sp.deluxe_price_pp) as min_deluxe_price
     FROM packages p

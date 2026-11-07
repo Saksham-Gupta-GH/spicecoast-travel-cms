@@ -12,13 +12,13 @@ import {
   DollarSign,
 } from "lucide-react";
 
-initDatabase();
+await initDatabase();
 
 export default async function AdminDashboardPage() {
   const session = await getStaffSession();
   if (session?.role === "editor") redirect("/admin/packages");
   if (session?.role === "consultant") redirect("/admin/enquiries");
-  const packageStats = db.prepare(`
+  const packageStats = await db.prepare(`
     SELECT
       COUNT(*) as total,
       SUM(CASE WHEN status = 'published' THEN 1 ELSE 0 END) as published,
@@ -26,7 +26,7 @@ export default async function AdminDashboardPage() {
     FROM packages
   `).get() as any;
 
-  const enquiryStats = db.prepare(`
+  const enquiryStats = await db.prepare(`
     SELECT
       COUNT(*) as total,
       SUM(CASE WHEN status = 'New' THEN 1 ELSE 0 END) as new_leads,
@@ -35,7 +35,7 @@ export default async function AdminDashboardPage() {
     FROM enquiries
   `).get() as any;
 
-  const recentLogs = db.prepare(`
+  const recentLogs = await db.prepare(`
     SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 5
   `).all() as any[];
 

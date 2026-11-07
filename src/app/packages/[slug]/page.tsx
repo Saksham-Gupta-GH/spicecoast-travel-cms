@@ -6,11 +6,11 @@ import { Footer } from "@/components/Footer";
 import { PackageDetailClient } from "./PackageDetailClient";
 import { ChevronRight } from "lucide-react";
 
-initDatabase();
+await initDatabase();
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const pkg = db.prepare("SELECT * FROM packages WHERE slug = ? OR id = ?").get(slug, slug) as any;
+  const pkg = await db.prepare("SELECT * FROM packages WHERE slug = ? OR id = ?").get(slug, slug) as any;
 
   if (!pkg) {
     return { title: "Package Not Found | SpiceCoast Holidays" };
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function PackageDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  const pkg = db.prepare(`
+  const pkg = await db.prepare(`
     SELECT * FROM packages
     WHERE slug = ? OR id = ?
   `).get(slug, slug) as any;
@@ -39,13 +39,13 @@ export default async function PackageDetailPage({ params }: { params: Promise<{ 
     notFound();
   }
 
-  const seasonalPrices = db.prepare(`
+  const seasonalPrices = await db.prepare(`
     SELECT * FROM seasonal_prices
     WHERE package_id = ?
     ORDER BY standard_price_pp ASC
   `).all(pkg.id) as any[];
 
-  const itinerary = db.prepare(`
+  const itinerary = await db.prepare(`
     SELECT * FROM itinerary_days
     WHERE package_id = ?
     ORDER BY day_number ASC
