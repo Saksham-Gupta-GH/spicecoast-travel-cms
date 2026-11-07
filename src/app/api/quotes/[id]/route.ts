@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
 
-await initDatabase();
-
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await initDatabase();
   try {
     const { id } = await params;
     const quote = await db.prepare(`

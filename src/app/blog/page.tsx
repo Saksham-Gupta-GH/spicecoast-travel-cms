@@ -5,7 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ChevronRight, User, Sparkles } from "lucide-react";
 
-await initDatabase();
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Kerala Travel Guides & Insider Blog | SpiceCoast Holidays",
@@ -13,6 +13,7 @@ export const metadata = {
 };
 
 export default async function BlogListPage() {
+  await initDatabase();
   const blogs = await db.prepare(`
     SELECT * FROM blogs
     WHERE status = 'published'

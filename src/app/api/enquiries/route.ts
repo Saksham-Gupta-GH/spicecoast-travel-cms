@@ -3,9 +3,8 @@ import db, { initDatabase } from "@/lib/db";
 import { triageEnquiry } from "@/lib/ai-engine";
 import { hasRole } from "@/lib/auth";
 
-await initDatabase();
-
 export async function GET(request: Request) {
+  await initDatabase();
   if (!(await hasRole(["admin", "consultant"]))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   try {
     const { searchParams } = new URL(request.url);
@@ -48,6 +47,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  await initDatabase();
   try {
     const body = await request.json();
     const {

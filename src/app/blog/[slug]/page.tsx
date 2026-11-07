@@ -6,9 +6,10 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ChevronRight, ArrowRight, User, Sparkles, Compass } from "lucide-react";
 
-await initDatabase();
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  await initDatabase();
   const { slug } = await params;
   const blog = await db.prepare("SELECT * FROM blogs WHERE slug = ?").get(slug) as any;
 
@@ -21,6 +22,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export default async function BlogDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  await initDatabase();
   const { slug } = await params;
 
   const blog = await db.prepare("SELECT * FROM blogs WHERE slug = ?").get(slug) as any;

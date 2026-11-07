@@ -3,9 +3,8 @@ import { BlogsCmsClient } from "./BlogsCmsClient";
 import { hasRole } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
-await initDatabase();
-
 export default async function AdminBlogsPage() {
+  await initDatabase();
   if (!(await hasRole(["admin", "editor"]))) redirect("/admin");
   const blogs = await db.prepare(`
     SELECT * FROM blogs ORDER BY created_at DESC

@@ -16,11 +16,10 @@ import {
   Star,
 } from "lucide-react";
 
-await initDatabase();
-
-export const revalidate = 60; // fast server-side cache
+export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
+  await initDatabase();
   const packages = await db.prepare(`
     SELECT p.*,
       MIN(sp.deluxe_price_pp) as min_price,

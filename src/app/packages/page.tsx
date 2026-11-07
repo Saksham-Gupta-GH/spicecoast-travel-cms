@@ -3,7 +3,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { PackagesCatalogClient } from "./PackagesCatalogClient";
 
-await initDatabase();
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Kerala & South India Holiday Packages | SpiceCoast Holidays Kochi",
@@ -11,6 +11,7 @@ export const metadata = {
 };
 
 export default async function PackagesPage() {
+  await initDatabase();
   const packages = await db.prepare(`
     SELECT p.*,
       MIN(sp.deluxe_price_pp) as min_price,

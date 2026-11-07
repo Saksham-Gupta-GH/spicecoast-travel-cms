@@ -2,12 +2,11 @@ import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
 import { hasRole } from "@/lib/auth";
 
-await initDatabase();
-
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await initDatabase();
   if (!(await hasRole(["admin", "consultant"]))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   try {
     const { id } = await params;
@@ -51,6 +50,7 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await initDatabase();
   if (!(await hasRole(["admin", "consultant"]))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   try {
     const { id } = await params;

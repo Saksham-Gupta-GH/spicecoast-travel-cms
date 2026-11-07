@@ -12,9 +12,8 @@ import {
   DollarSign,
 } from "lucide-react";
 
-await initDatabase();
-
 export default async function AdminDashboardPage() {
+  await initDatabase();
   const session = await getStaffSession();
   if (session?.role === "editor") redirect("/admin/packages");
   if (session?.role === "consultant") redirect("/admin/enquiries");

@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
 import { hasRole } from "@/lib/auth";
 
-await initDatabase();
-
 export async function GET() {
+  await initDatabase();
   if (!(await hasRole(["admin", "consultant"]))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   try {
     const quotes = await db.prepare(`
@@ -21,6 +20,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  await initDatabase();
   if (!(await hasRole(["admin", "consultant"]))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   try {
     const body = await request.json();

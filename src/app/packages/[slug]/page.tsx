@@ -6,9 +6,10 @@ import { Footer } from "@/components/Footer";
 import { PackageDetailClient } from "./PackageDetailClient";
 import { ChevronRight } from "lucide-react";
 
-await initDatabase();
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  await initDatabase();
   const { slug } = await params;
   const pkg = await db.prepare("SELECT * FROM packages WHERE slug = ? OR id = ?").get(slug, slug) as any;
 
@@ -28,6 +29,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export default async function PackageDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  await initDatabase();
   const { slug } = await params;
 
   const pkg = await db.prepare(`

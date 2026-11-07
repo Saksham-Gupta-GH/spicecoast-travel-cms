@@ -3,9 +3,8 @@ import { QuotesClient } from "./QuotesClient";
 import { hasRole } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
-await initDatabase();
-
 export default async function AdminQuotesPage() {
+  await initDatabase();
   if (!(await hasRole(["admin", "consultant"]))) redirect("/admin");
   const quotes = await db.prepare(`
     SELECT q.*, p.title as package_title, p.slug as package_slug

@@ -3,9 +3,8 @@ import db, { initDatabase } from "@/lib/db";
 import { hasRole } from "@/lib/auth";
 
 // Ensure DB is ready
-await initDatabase();
-
 export async function GET(request: Request) {
+  await initDatabase();
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category");
@@ -63,6 +62,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  await initDatabase();
   if (!(await hasRole(["admin", "editor"]))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   try {
     const body = await request.json();

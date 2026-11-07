@@ -2,9 +2,10 @@ import { notFound } from "next/navigation";
 import db, { initDatabase } from "@/lib/db";
 import { QuoteViewClient } from "./QuoteViewClient";
 
-await initDatabase();
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  await initDatabase();
   const { id } = await params;
   const quote = await db.prepare(`
     SELECT quote_number, traveller_name FROM quotes WHERE id = ? OR quote_number = ?
@@ -18,6 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 }
 
 export default async function QuotePage({ params }: { params: Promise<{ id: string }> }) {
+  await initDatabase();
   const { id } = await params;
 
   const quote = await db.prepare(`

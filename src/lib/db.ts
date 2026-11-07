@@ -37,17 +37,19 @@ function createPool() {
   });
 }
 
-const pool = globalForDatabase.spicecoastPool ?? createPool();
-if (process.env.NODE_ENV !== "production") globalForDatabase.spicecoastPool = pool;
+function getPool() {
+  globalForDatabase.spicecoastPool ??= createPool();
+  return globalForDatabase.spicecoastPool;
+}
 
 const db = {
   async exec(sql: string) {
-    await pool.query(sql);
+    await getPool().query(sql);
   },
   prepare(sql: string) {
     const query = async (parameters: QueryParameters = []) => {
       const compiled = compileQuery(sql, parameters);
-      return pool.query(compiled.text, compiled.values);
+      return getPool().query(compiled.text, compiled.values);
     };
 
     const normalize = (args: unknown[]): QueryParameters => {

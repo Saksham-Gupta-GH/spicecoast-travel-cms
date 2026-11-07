@@ -1,9 +1,10 @@
 import { MetadataRoute } from "next";
 import db, { initDatabase } from "@/lib/db";
 
-await initDatabase();
+export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  await initDatabase();
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://spicecoast.in";
 
   const packages = await db.prepare("SELECT slug, updated_at FROM packages WHERE status = 'published'").all() as any[];
