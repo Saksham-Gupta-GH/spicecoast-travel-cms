@@ -840,12 +840,12 @@ async function seedInitialData() {
     adults_count: 4,
     kids_count: 0,
     selected_tier: "Standard",
-    price_per_person: 17857, // base before 5% GST: 17857 * 1.05 = 18750
-    subtotal_amount: 71428,
+    price_per_person: 18750, // database tariff is GST-inclusive
+    subtotal_amount: 71429,
     gst_percent: 5.0,
-    gst_amount: 3572,
+    gst_amount: 3571,
     grand_total: 75000,
-    notes: "Includes 2 twin-sharing deluxe rooms, AC Tempo Traveller with English-speaking chauffeur, and monument entry permits.",
+    notes: "Includes 2 twin-sharing standard rooms, AC Tempo Traveller with English-speaking chauffeur, and monument entry permits.",
     status: "Sent",
     created_by: "usr_consultant",
   });
@@ -960,6 +960,17 @@ async function seedTravellerPortalDemo() {
     WHERE LOWER(email) = LOWER('e.campbell@edinburgh.ac.uk')
       AND traveller_user_id IS NULL
   `).run(travellerId);
+
+  // Keep the seeded reviewer proposal aligned with the GST-inclusive sample tariff.
+  await db.prepare(`
+    UPDATE quotes
+    SET price_per_person = 18750,
+        subtotal_amount = 71429,
+        gst_amount = 3571,
+        grand_total = 75000,
+        notes = 'Includes 2 twin-sharing standard rooms, AC Tempo Traveller with English-speaking chauffeur, and monument entry permits.'
+    WHERE id = 'QUO-2026-8819'
+  `).run();
 }
 
 export default db;
