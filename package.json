@@ -7,7 +7,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test tests/core-logic.test.ts"
+    "test": "tsx --env-file=.env.local --test tests/core-logic.test.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",
