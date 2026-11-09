@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
+import { internalServerError } from "@/lib/api-response";
 
 export async function GET(
   request: Request,
@@ -30,7 +31,7 @@ export async function GET(
         exclusions: JSON.parse(quote.exclusions_json || "[]"),
       },
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return internalServerError("GET /api/quotes/[id]", error);
   }
 }

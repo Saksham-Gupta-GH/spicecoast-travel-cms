@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
 import { hasRole } from "@/lib/auth";
+import { internalServerError } from "@/lib/api-response";
 
 export async function GET(
   request: Request,
@@ -41,8 +42,8 @@ export async function GET(
         human_corrections: enquiry.human_corrections_json ? JSON.parse(enquiry.human_corrections_json) : null,
       },
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return internalServerError("GET /api/enquiries/[id]", error);
   }
 }
 
@@ -130,7 +131,7 @@ export async function PUT(
     }
 
     return NextResponse.json({ success: true, message: "Enquiry updated successfully" });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return internalServerError("PUT /api/enquiries/[id]", error);
   }
 }

@@ -8,6 +8,7 @@ export function PublicEnquiryForm() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
+  const [companyWebsite, setCompanyWebsite] = useState("");
   const [dpdpConsent, setDpdpConsent] = useState(true);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -41,6 +42,7 @@ export function PublicEnquiryForm() {
           raw_message: message,
           source: "web_form",
           dpdp_consent: dpdpConsent,
+          company_website: companyWebsite,
         }),
       });
 
@@ -119,6 +121,7 @@ export function PublicEnquiryForm() {
               setEmail("");
               setPhone("");
               setMessage("");
+              setCompanyWebsite("");
             }}
             className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-6 py-2.5 rounded-lg transition"
           >
@@ -152,6 +155,18 @@ export function PublicEnquiryForm() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="absolute -left-[10000px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
+          <label htmlFor="company-website">Company website</label>
+          <input
+            id="company-website"
+            name="company_website"
+            type="text"
+            value={companyWebsite}
+            onChange={(event) => setCompanyWebsite(event.target.value)}
+            tabIndex={-1}
+            autoComplete="off"
+          />
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">Your Full Name *</label>

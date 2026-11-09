@@ -20,6 +20,11 @@
 # production
 /build
 
+# local submission packaging (uploaded separately; not part of application source)
+/Technical_Design_Document.html
+/Saksham_Gupta_CompanyA_Kochi_TakeHome.zip
+/submission/
+
 # legacy local database artifacts from the pre-PostgreSQL prototype
 spicecoast.db
 spicecoast.db-shm

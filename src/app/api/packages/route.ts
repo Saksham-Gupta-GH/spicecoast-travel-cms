@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
 import { hasRole } from "@/lib/auth";
+import { internalServerError } from "@/lib/api-response";
 
 // Ensure DB is ready
 export async function GET(request: Request) {
@@ -56,8 +57,8 @@ export async function GET(request: Request) {
     }));
 
     return NextResponse.json({ success: true, data: parsed });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return internalServerError("GET /api/packages", error);
   }
 }
 
@@ -176,7 +177,7 @@ export async function POST(request: Request) {
     `).run(created_by, id, `Created new package: ${title} (${id})`);
 
     return NextResponse.json({ success: true, package_id: id, slug });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return internalServerError("POST /api/packages", error);
   }
 }

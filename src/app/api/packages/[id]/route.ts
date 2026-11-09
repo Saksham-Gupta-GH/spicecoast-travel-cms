@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
 import { hasRole } from "@/lib/auth";
+import { internalServerError } from "@/lib/api-response";
 
 export async function GET(
   request: Request,
@@ -56,8 +57,8 @@ export async function GET(
         versions,
       },
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return internalServerError("GET /api/packages/[id]", error);
   }
 }
 
@@ -165,8 +166,8 @@ export async function PUT(
     `).run(updatedBy, id, `Updated ${existing.title} to version ${newVersion}: ${changeSummary}`);
 
     return NextResponse.json({ success: true, version: newVersion });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return internalServerError("PUT /api/packages/[id]", error);
   }
 }
 
@@ -185,7 +186,7 @@ export async function DELETE(
     `).run(id);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return internalServerError("DELETE /api/packages/[id]", error);
   }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
 import { hasRole } from "@/lib/auth";
+import { internalServerError } from "@/lib/api-response";
 
 export async function GET() {
   await initDatabase();
@@ -13,7 +14,7 @@ export async function GET() {
     `).all();
 
     return NextResponse.json({ success: true, data: logs });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return internalServerError("GET /api/activity-logs", error);
   }
 }

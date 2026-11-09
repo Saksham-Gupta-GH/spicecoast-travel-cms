@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
 import { hasRole } from "@/lib/auth";
+import { internalServerError } from "@/lib/api-response";
 
 export async function GET(request: Request) {
   await initDatabase();
@@ -26,8 +27,8 @@ export async function GET(request: Request) {
     }));
 
     return NextResponse.json({ success: true, data: parsed });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return internalServerError("GET /api/blogs", error);
   }
 }
 
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
     `).run(author, id, `Published blog post: ${title} linking to packages: ${related_package_ids.join(", ")}`);
 
     return NextResponse.json({ success: true, blog_id: id, slug });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return internalServerError("POST /api/blogs", error);
   }
 }

@@ -33,7 +33,7 @@ Every item below is an implementation assumption rather than a fact supplied by 
 * **Working hours and SLA:** The interface demonstrates a one-hour response target but does not calculate business hours because the brief does not define a calendar or holiday policy.
 * **AI:** Enquiry extraction uses Gemini first, OpenRouter second and a deterministic local extractor as the credential-free final fallback. Package ranking and all pricing remain deterministic and database-backed.
 * **External channels:** WhatsApp, email, chat and phone ingestion and message delivery are mocked as required by the core-build instructions. Clicking send records an approved reply and timestamp; it does not contact a traveller.
-* **Legacy URLs:** Five representative redirects are implemented. The actual list of 140 old URLs was not supplied and must be imported during migration.
+* **Legacy URLs:** Eight representative redirects are implemented from one shared mapping. The actual list of 140 old URLs was not supplied and must be imported during migration.
 * **Images:** Remote Unsplash images are used as sample editorial assets and are not client-owned production assets.
 
 ---
@@ -82,9 +82,9 @@ Every item below is an implementation assumption rather than a fact supplied by 
 ```
 
 ### Why Nextjs 16 App Router
-1. **Server-Side Rendering (SSR) for Search & Core Web Vitals:** Tour packages and destination guides require high SEO visibility and fast first-contentful paint (<2.5s). Server Components render complete HTML with zero clientside database waterfall.
+1. **Server-Side Rendering (SSR) for Search & Core Web Vitals:** Tour packages and destination guides require high SEO visibility. Server Components render complete HTML with zero client-side database waterfall; under 2.5 seconds on 4G is the production performance target, not an unverified claim about every free-tier cold start.
 2. **Unified Full-Stack Deployment:** Eliminates the operational overhead of running separate frontend and backend microservices. Reviewers need only one command (`npm run dev`) to test the entire system.
-3. **Optimized Turbopack Bundling:** Instant compilation and type checking with zero external bundle bloat.
+3. **Predictable Production Build:** Development uses Next.js defaults, while the production script uses Next.js's supported Webpack path so Tailwind's PostCSS pipeline is compiled deterministically on Vercel.
 
 ### Why Managed PostgreSQL on Neon
 * **Durable Serverless Writes:** Vercel function filesystems are ephemeral. PostgreSQL keeps package edits, versions and enquiries durable across cold starts and deployments.
@@ -150,7 +150,7 @@ Database connections and schema initialization are lazy: route modules can be co
 * **`enquiries`**: Unified lead store supporting Web, WhatsApp, and Email. Houses both raw incoming text and extracted AI attributes.
 * **`quotes`**: Itemized proposals with subtotal, 5% GST calculation, and validity period.
 * **`activity_logs`**: Append-only application audit trail of package edits, pricing changes, and simulated reply dispatches. Database administrators can still alter PostgreSQL records, so “tamper-proof” is not claimed.
-* **`redirects`**: Schema for legacy mappings plus five representative proxy redirects. The production migration requires the client’s complete 140-URL export.
+* **`redirects`**: Schema for legacy mappings plus eight representative proxy redirects sourced from one shared mapping. The production migration requires the client’s complete 140-URL export.
 
 ---
 
@@ -231,7 +231,7 @@ A tailored design system inspired by Kerala's natural landscapes:
 ## 6 Testing Quality and Security
 
 ### Automated Test Suite
-Run via `npm test` using Node's native test runner:
+Run via `npm test` using Node's native test runner after configuring `DATABASE_URL`. The suite intentionally exercises the real PostgreSQL adapter and seeded schema:
 * **AI Extraction Tests:** Validates extraction of party size (adults/kids), travel window, budget in INR, and must-haves on sample queries from the brief.
 * **Package Recommendation Scoring:** Validates that `PKG-KL-07` is selected as the #1 best fit for family + houseboat queries.
 * **Price Integrity Verification:** Ensures generated draft replies contain exact numbers from `seasonal_prices` (e.g. ₹32,500 and ₹24,900) and explicitly mention twin sharing and 5% GST.
@@ -241,9 +241,11 @@ Run via `npm test` using Node's native test runner:
 ### Security and Privacy Safeguards
 * **No Production Secrets in Repository:** No API keys or production credentials are committed. The documented reviewer accounts and shared demo password are intentionally public test data.
 * **DPDP Act 2023 Consent Enforcement:** Explicit opt-in captured before storing lead contact details.
+* **Public Enquiry Abuse Controls:** Unauthenticated callers are forced to the consented `web_form` source. A hidden honeypot and a PostgreSQL-backed five-request/ten-minute throttle run before any external AI request; only salted request-identity hashes are stored.
 * **Sanitized Inputs:** All PostgreSQL queries use parameter placeholders rather than string interpolation, preventing SQL injection attacks.
 * **Authentication and Access Control:** Staff authenticate through a dedicated sign-in page. The server issues a signed, HTTP-only, same-site session cookie with an eight-hour expiry. Server pages and mutating/read APIs repeat role checks: admins have full access, editors manage packages/blogs, and consultants manage enquiries/quotes.
 * **Server Validation:** Public enquiry payloads enforce name, email, message and length constraints, accepted sources, and explicit consent for digital follow-up. PostgreSQL statements are parameterized.
+* **Safe Failure Responses:** Unexpected API details are logged server-side with a request ID; clients receive a generic 500 response instead of database or provider error text.
 
 ---
 
@@ -260,6 +262,7 @@ Run via `npm test` using Node's native test runner:
 ### Known Limitations
 * The free Vercel and Neon tiers are appropriate for a non-commercial assessment demo, not the stated 2,400-enquiry-per-month production workload. Production needs paid capacity, backups, observability, retention policies and a data-hosting review under the DPDP Act.
 * Database schema creation and sample seeding run automatically at application startup for reviewer convenience. Production should replace this with an explicit, versioned migration pipeline.
+* The three assessment accounts are a hardcoded demo registry with environment-overridable passwords, not a production identity store. Signed session verification and server-side role checks are real; production should replace the registry with managed identity, password hashing, recovery and revocation.
 * External extraction depends on third-party availability and quotas; the local engine preserves the core flow during failures. Direct identifiers are redacted, but a production DPDP review must still assess provider terms, retention, cross-border processing and consent. Low-confidence fields remain editable and nothing is sent without review.
 * Scheduled package status is stored, but a background publication scheduler is not implemented in the core slice.
 * Remote sample images require network access; production should use an approved media library and image ownership checks.

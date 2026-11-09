@@ -21,7 +21,7 @@ npm install
 cp .env.example .env.local
 ```
 
-Supply your own PostgreSQL connection string and a long random session secret in `.env.local`. The environment variable names are listed in section 3; values are intentionally not committed.
+Supply your own PostgreSQL connection string and a long random session secret in `.env.local`. The environment variable names are listed in section 3; values are intentionally not committed. `npm test` is a database-backed integration suite, so `DATABASE_URL` must be valid before running it.
 
 ```bash
 npm test
@@ -111,4 +111,4 @@ npm run lint
 npm run build
 ```
 
-The core tests cover extraction, package ranking, database-sourced prices, instant acknowledgement and version persistence. The application also validates public inputs, parameterizes SQL, keeps secrets out of the repository and checks staff roles on server pages and APIs.
+The core tests cover extraction, PII redaction, package ranking, database-sourced prices, instant acknowledgement and version persistence. The application also validates public inputs, throttles unauthenticated enquiry attempts before AI calls, parameterizes SQL, keeps secrets out of the repository and checks staff roles on server pages and APIs.

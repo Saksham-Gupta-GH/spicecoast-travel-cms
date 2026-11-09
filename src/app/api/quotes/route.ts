@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
 import { hasRole } from "@/lib/auth";
+import { internalServerError } from "@/lib/api-response";
 
 export async function GET() {
   await initDatabase();
@@ -14,8 +15,8 @@ export async function GET() {
     `).all();
 
     return NextResponse.json({ success: true, data: quotes });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return internalServerError("GET /api/quotes", error);
   }
 }
 
@@ -126,7 +127,7 @@ export async function POST(request: Request) {
       quote_number: quoteNumber,
       grand_total: totalWithGst,
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return internalServerError("POST /api/quotes", error);
   }
 }

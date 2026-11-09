@@ -17,6 +17,7 @@ export function EnquiryModal({ packageId, packageTitle, isOpen, onClose }: Enqui
   const [message, setMessage] = useState(
     packageTitle ? `Hi, I am interested in ${packageTitle}. Please share customized pricing and availability.` : ""
   );
+  const [companyWebsite, setCompanyWebsite] = useState("");
   const [dpdpConsent, setDpdpConsent] = useState(true);
   const [loading, setLoading] = useState(false);
   const [successData, setSuccessData] = useState<any>(null);
@@ -46,6 +47,7 @@ export function EnquiryModal({ packageId, packageTitle, isOpen, onClose }: Enqui
           package_id: packageId || null,
           source: "web_form",
           dpdp_consent: dpdpConsent,
+          company_website: companyWebsite,
         }),
       });
 
@@ -67,6 +69,7 @@ export function EnquiryModal({ packageId, packageTitle, isOpen, onClose }: Enqui
     setEmail("");
     setPhone("");
     setMessage("");
+    setCompanyWebsite("");
     setSuccessData(null);
     setError(null);
     onClose();
@@ -163,6 +166,18 @@ export function EnquiryModal({ packageId, packageTitle, isOpen, onClose }: Enqui
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4 text-sm">
+              <div className="absolute -left-[10000px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
+                <label htmlFor="modal-company-website">Company website</label>
+                <input
+                  id="modal-company-website"
+                  name="company_website"
+                  type="text"
+                  value={companyWebsite}
+                  onChange={(event) => setCompanyWebsite(event.target.value)}
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
+              </div>
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">Full Name *</label>
                 <input

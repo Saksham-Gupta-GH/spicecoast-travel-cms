@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import db, { initDatabase } from "@/lib/db";
 import { hasRole } from "@/lib/auth";
+import { internalServerError } from "@/lib/api-response";
 
 export async function GET(
   request: Request,
@@ -17,8 +18,8 @@ export async function GET(
     `).all(id);
 
     return NextResponse.json({ success: true, versions });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return internalServerError("GET /api/packages/[id]/versions", error);
   }
 }
 
@@ -97,7 +98,7 @@ export async function POST(
       restored_to: versionRecord.version_number,
       new_version: restoredVersionNum,
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return internalServerError("POST /api/packages/[id]/versions", error);
   }
 }

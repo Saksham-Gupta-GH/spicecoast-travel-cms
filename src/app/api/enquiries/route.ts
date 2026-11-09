@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import db, { initDatabase } from "@/lib/db";
 import { triageEnquiry } from "@/lib/ai-engine";
-import { hasRole } from "@/lib/auth";
+import { getStaffSession, hasRole } from "@/lib/auth";
+import { internalServerError } from "@/lib/api-response";
+import { enforcePublicEnquiryRateLimit } from "@/lib/enquiry-security";
 
 export async function GET(request: Request) {
-  await initDatabase();
-  if (!(await hasRole(["admin", "consultant"]))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   try {
+    await initDatabase();
+    if (!(await hasRole(["admin", "consultant"]))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const source = searchParams.get("source");
@@ -41,14 +44,14 @@ export async function GET(request: Request) {
     }));
 
     return NextResponse.json({ success: true, data: parsed });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return internalServerError("GET /api/enquiries", error);
   }
 }
 
 export async function POST(request: Request) {
-  await initDatabase();
   try {
+    await initDatabase();
     const body = await request.json();
     const {
       traveller_name,
@@ -56,11 +59,26 @@ export async function POST(request: Request) {
       phone,
       raw_message,
       package_id = null,
-      source = "web_form",
       dpdp_consent = false,
+      company_website = "",
     } = body;
 
+    // Honeypot: real users never see or populate this field. Pretend success so bots do not adapt.
+    if (typeof company_website === "string" && company_website.trim()) {
+      return NextResponse.json({ success: true, enquiry_id: "ENQ-RECEIVED" });
+    }
+
+    const staffSession = await getStaffSession();
     const validSources = ["web_form", "whatsapp", "email", "phone", "chat"];
+    const requestedSource = typeof body.source === "string" && validSources.includes(body.source) ? body.source : "web_form";
+    // Unauthenticated callers may only create consented website enquiries. Staff can log other channels.
+    const source = staffSession ? requestedSource : "web_form";
+
+    if (!staffSession) {
+      const rateLimitResponse = await enforcePublicEnquiryRateLimit(request);
+      if (rateLimitResponse) return rateLimitResponse;
+    }
+
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (
       typeof traveller_name !== "string" || traveller_name.trim().length < 2 || traveller_name.length > 100 ||
@@ -71,13 +89,12 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json({ success: false, error: "Missing required enquiry fields" }, { status: 400 });
     }
-    if (source === "web_form" && dpdp_consent !== true) {
+    if (!staffSession && dpdp_consent !== true) {
       return NextResponse.json({ success: false, error: "Consent is required for digital follow-up" }, { status: 400 });
     }
 
-    // Auto-generate enquiry ID
-    const count = (await db.prepare("SELECT COUNT(*)::int as c FROM enquiries").get() as any).c + 1;
-    const enquiryId = `ENQ-2026-${count.toString().padStart(3, "0")}`;
+    // Collision-safe public reference; unlike COUNT(*) + 1 this is safe under concurrent submissions.
+    const enquiryId = `ENQ-${new Date().getUTCFullYear()}-${randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`;
 
     // Execute AI Triage Pipeline
     const triageResult = await triageEnquiry(raw_message, traveller_name, enquiryId);
@@ -141,7 +158,7 @@ export async function POST(request: Request) {
       suggested_packages: triageResult.suggestedPackages,
       draft_reply: triageResult.draftReply,
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return internalServerError("POST /api/enquiries", error);
   }
 }

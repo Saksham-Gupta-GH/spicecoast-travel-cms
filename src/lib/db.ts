@@ -1,4 +1,5 @@
 import { Pool } from "pg";
+import { LEGACY_REDIRECTS } from "./legacy-redirects";
 
 type QueryParameters = unknown[] | Record<string, unknown>;
 
@@ -261,6 +262,14 @@ async function initializeDatabase() {
       new_path TEXT NOT NULL,
       status_code INTEGER DEFAULT 301
     );
+
+    -- Public enquiry throttling. Stores only a salted hash, never a raw IP address.
+    CREATE TABLE IF NOT EXISTS enquiry_rate_limits (
+      identity_hash TEXT PRIMARY KEY,
+      window_started_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      request_count INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // Additive migration for deployments created before external AI providers were enabled.
@@ -270,7 +279,20 @@ async function initializeDatabase() {
     ALTER TABLE enquiries ADD COLUMN IF NOT EXISTS ai_fallback_reason TEXT;
   `);
 
+  await syncLegacyRedirects();
   await seedInitialData();
+}
+
+async function syncLegacyRedirects() {
+  const upsertRedirect = db.prepare(`
+    INSERT INTO redirects (old_path, new_path, status_code)
+    VALUES (@old_path, @new_path, 301)
+    ON CONFLICT (old_path) DO UPDATE SET new_path = EXCLUDED.new_path, status_code = 301
+  `);
+
+  for (const redirect of LEGACY_REDIRECTS) {
+    await upsertRedirect.run({ old_path: redirect.oldPath, new_path: redirect.newPath });
+  }
 }
 
 async function seedInitialData() {
@@ -859,24 +881,6 @@ Explore our curated Munnar itineraries with dedicated chauffeur-driven private v
     seo_description: "Discover the best time to visit Munnar's tea plantations and viewpoints. Read our seasonal guide from local Kochi travel experts.",
     status: "published",
   });
-
-  // Seed 301 Redirects (Demonstrating solution to "redirects from 140 old URLs")
-  const insertRedirect = db.prepare(`
-    INSERT INTO redirects (old_path, new_path, status_code)
-    VALUES (@old_path, @new_path, @status_code)
-  `);
-
-  const oldUrls = [
-    { old: "/kerala-packages/munnar-alleppey.html", target: "/packages/munnar-thekkady-alleppey-houseboat" },
-    { old: "/tours/south-india-pilgrim-madurai.php", target: "/packages/madurai-rameswaram-kanyakumari-pilgrim" },
-    { old: "/honeymoon-specials/wayanad-resort.asp", target: "/packages/wayanad-misty-hills-luxury-retreat" },
-    { old: "/luxury/kumarakom-marari-7days", target: "/packages/kerala-grand-heritage-backwaters-beach" },
-    { old: "/blog/houseboat-tips-kerala", target: "/blog/alleppey-houseboat-guide-first-timers" },
-  ];
-
-  for (const r of oldUrls) {
-    await insertRedirect.run({ old_path: r.old, new_path: r.target, status_code: 301 });
-  }
 
   // Seed Activity Log
   const insertActivity = db.prepare(`

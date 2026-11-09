@@ -1,4 +1,4 @@
-import { test, describe } from "node:test";
+import { test, describe, before } from "node:test";
 import assert from "node:assert/strict";
 import db, { initDatabase } from "../src/lib/db";
 import {
@@ -9,7 +9,9 @@ import {
   redactDirectIdentifiers,
 } from "../src/lib/ai-engine";
 
-initDatabase();
+before(async () => {
+  await initDatabase();
+});
 
 describe("1. AI Enquiry Extraction Logic", () => {
   test("Extracts party size, dates, budget and houseboat from brief's sample query", () => {
