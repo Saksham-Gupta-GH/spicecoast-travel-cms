@@ -2,6 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { hashPassword, verifyPassword } from "../src/lib/passwords";
 import { resolveRoutePoints } from "../src/lib/route-points";
+import { canTravellerRespondToQuote, quoteResponseBlockReason } from "../src/lib/quote-transitions";
 
 describe("Traveller account password security", () => {
   test("hashes passwords with a unique salt and verifies the correct password", async () => {
@@ -27,5 +28,17 @@ describe("Package route maps", () => {
   test("supports aliases and ignores unknown locations safely", () => {
     const points = resolveRoutePoints(["Cochin", "Alappuzha", "Unknown resort"]);
     assert.deepEqual(points.map((point) => point.name), ["Kochi", "Alleppey"]);
+  });
+});
+
+describe("Traveller quote response transitions", () => {
+  test("allows reviewable proposals and rejects drafts or final states", () => {
+    assert.equal(canTravellerRespondToQuote("Sent"), true);
+    assert.equal(canTravellerRespondToQuote("Changes Requested"), true);
+    assert.equal(canTravellerRespondToQuote("Declined"), true);
+    assert.equal(canTravellerRespondToQuote("Draft"), false);
+    assert.equal(canTravellerRespondToQuote("Accepted"), false);
+    assert.equal(canTravellerRespondToQuote("Expired"), false);
+    assert.match(quoteResponseBlockReason("Accepted"), /already been accepted/i);
   });
 });

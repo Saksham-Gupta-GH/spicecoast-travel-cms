@@ -10,10 +10,9 @@ const MAX_ATTEMPTS_PER_WINDOW = 10;
 function requestIdentity(request: Request, email: string) {
   const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   const ip = forwarded || request.headers.get("x-real-ip") || "unknown";
-  const userAgent = request.headers.get("user-agent")?.slice(0, 160) || "unknown";
   const salt = process.env.SESSION_SECRET || "local-auth-rate-limit-salt";
   return createHash("sha256")
-    .update(`${salt}|${ip}|${userAgent}|${email.trim().toLowerCase()}`)
+    .update(`${salt}|${ip}|${email.trim().toLowerCase()}`)
     .digest("hex");
 }
 

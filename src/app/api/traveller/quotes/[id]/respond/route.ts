@@ -40,7 +40,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (error instanceof Error && /not found/i.test(error.message)) {
       return NextResponse.json({ success: false, error: "Quote not found" }, { status: 404 });
     }
-    if (error instanceof Error && /expired|describe/i.test(error.message)) {
+    if (error instanceof Error && /accepted|expired|not been sent|not available/i.test(error.message)) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 409 });
+    }
+    if (error instanceof Error && /describe/i.test(error.message)) {
       return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
     return internalServerError("POST /api/traveller/quotes/[id]/respond", error);

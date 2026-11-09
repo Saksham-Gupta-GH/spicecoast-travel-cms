@@ -3,6 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import db, { initDatabase } from "./db";
 import { hashPassword, verifyPassword } from "./passwords";
+import { canTravellerRespondToQuote, quoteResponseBlockReason } from "./quote-transitions";
 
 export type TravellerAccount = {
   id: string;
@@ -119,18 +120,20 @@ export async function respondToTravellerQuote(input: {
     WHERE (id = ? OR quote_number = ?) AND traveller_user_id = ?
   `).get(input.quoteId, input.quoteId, input.userId) as { id: string; quote_number: string; status: string } | undefined;
   if (!quote) throw new Error("Quote not found.");
-  if (quote.status === "Expired") throw new Error("This quote has expired. Please contact your consultant.");
+  if (!canTravellerRespondToQuote(quote.status)) throw new Error(quoteResponseBlockReason(quote.status));
 
   const message = input.message.trim();
   if (input.status === "Changes Requested" && message.length < 10) {
     throw new Error("Please describe the requested change in at least 10 characters.");
   }
 
-  await db.prepare(`
+  const update = await db.prepare(`
     UPDATE quotes
     SET status = ?, traveller_response = ?, responded_at = CURRENT_TIMESTAMP
     WHERE id = ? AND traveller_user_id = ?
+      AND status IN ('Sent', 'Changes Requested', 'Declined')
   `).run(input.status, message || null, quote.id, input.userId);
+  if (update.changes !== 1) throw new Error(quoteResponseBlockReason(quote.status));
 
   await db.prepare(`
     INSERT INTO activity_logs (user_id, user_name, action, entity_type, entity_id, details)

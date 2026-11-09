@@ -41,7 +41,7 @@ Open `/staff-login` or click **Staff CMS and AI Inbox**.
 | Consultant | `consultant@spicecoast.in` | `SpiceCoastDemo!2026` | Enquiry review, corrections, replies and quotes |
 | Traveller | `e.campbell@edinburgh.ac.uk` | `SpiceCoastTraveller!2026` | Private linked proposals, approval, decline and change requests |
 
-These are fictional demonstration accounts. Login creates a signed, HTTP-only, same-site session cookie. Server-rendered pages and API routes repeat staff-role or traveller-ownership checks. A new traveller can create an account only by matching both the email and quote number on an unclaimed proposal.
+These are fictional demonstration accounts. Login creates a signed, HTTP-only, same-site session cookie. Server-rendered pages and API routes repeat staff-role or traveller-ownership checks. A new traveller can create an account only by matching both the email and quote number on an unclaimed proposal. Shared proposal links redirect signed-out visitors to `/traveller-login` before returning to the requested quote.
 
 ## 3 Environment Variables
 
@@ -106,7 +106,7 @@ The free tiers are appropriate for a non-commercial assessment demo and may have
 
 1. Open `/traveller-login` with the seeded traveller credentials above.
 2. Open proposal `SCH-2026-Q8819` and confirm its database price, itinerary circuit and route map.
-3. Choose **Approve proposal**, **Request changes** or **Decline**. Refresh the page and confirm that the decision persists and appears in the traveller dashboard and staff quote workflow.
+3. Choose **Approve proposal**, **Request changes** or **Decline**. Refresh the page and confirm that the decision persists and appears in the traveller dashboard and staff quote workflow. Acceptance is final from the traveller portal; reopening would require a consultant workflow that is not implemented in this prototype.
 4. Use **Print or Save as PDF** for the branded browser PDF flow. Approval continues the offline consultant booking process; payment, server-side PDF generation and outbound email remain explicitly unimplemented.
 
 ## 6 Verification
@@ -118,4 +118,4 @@ npm run lint
 npm run build
 ```
 
-The database-backed integration tests cover extraction, PII redaction, package ranking, database-sourced prices, instant acknowledgement and version persistence. `npm run test:unit` covers salted traveller password verification and map-route normalization without needing a database. The application also validates public inputs, throttles unauthenticated enquiry and authentication attempts, parameterizes SQL, keeps secrets out of the repository and checks staff roles or traveller quote ownership on server pages and APIs.
+The database-backed integration tests cover extraction, PII redaction, package ranking, database-sourced prices, instant acknowledgement and version persistence. `npm run test:unit` covers salted traveller password verification, map-route normalization and permitted proposal-state transitions without needing a database. The application also validates public inputs, throttles unauthenticated enquiry and authentication attempts, parameterizes SQL, keeps secrets out of the repository and checks staff roles or traveller quote ownership on server pages and APIs.

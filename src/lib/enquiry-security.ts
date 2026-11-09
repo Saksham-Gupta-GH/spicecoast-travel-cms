@@ -8,9 +8,8 @@ const MAX_REQUESTS_PER_WINDOW = 5;
 function requestIdentity(request: Request) {
   const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   const ip = forwarded || request.headers.get("x-real-ip") || "unknown";
-  const userAgent = request.headers.get("user-agent")?.slice(0, 160) || "unknown";
   const salt = process.env.SESSION_SECRET || "local-rate-limit-salt";
-  return createHash("sha256").update(`${salt}|${ip}|${userAgent}`).digest("hex");
+  return createHash("sha256").update(`${salt}|${ip}`).digest("hex");
 }
 
 export async function enforcePublicEnquiryRateLimit(request: Request) {

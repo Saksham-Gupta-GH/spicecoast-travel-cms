@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Compass, MessageSquareText, Printer, XCircle } from "lucide-react";
 import { RouteMap } from "@/components/RouteMap";
+import { canTravellerRespondToQuote } from "@/lib/quote-transitions";
 
 type Decision = "Accepted" | "Changes Requested" | "Declined";
 
@@ -26,6 +27,7 @@ export function QuoteViewClient({ quote, viewer }: Props) {
   const [showChanges, setShowChanges] = useState(false);
   const [pending, setPending] = useState<Decision | null>(null);
   const [error, setError] = useState("");
+  const canRespond = canTravellerRespondToQuote(status);
 
   async function respond(decision: Decision) {
     setError("");
@@ -119,7 +121,7 @@ export function QuoteViewClient({ quote, viewer }: Props) {
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"><div className="text-xs text-slate-500">Authorized signatory: <strong className="text-slate-800">Jawahar Kurian (Founder &amp; MD)</strong></div><span className={`inline-flex w-fit rounded-full border px-3 py-1.5 text-xs font-bold ${DECISION_STYLES[status] || DECISION_STYLES.Sent}`}>{status}</span></div>
           {responseMessage && status === "Changes Requested" && <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-950"><MessageSquareText className="mt-0.5 h-4 w-4 shrink-0" />{responseMessage}</div>}
 
-          {viewer === "traveller" && <div className="mt-6 space-y-4 print:hidden">
+          {viewer === "traveller" && canRespond && <div className="mt-6 space-y-4 print:hidden">
             <p className="text-xs leading-5 text-slate-500">Your choice is saved for your consultant. You can change it while the proposal remains active.</p>
             {showChanges && <textarea value={draftMessage} onChange={(event) => setDraftMessage(event.target.value)} maxLength={1000} rows={4} placeholder="Tell your consultant what should change…" className="w-full rounded-xl border border-slate-300 p-3 text-sm outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-50" />}
             {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
@@ -129,6 +131,7 @@ export function QuoteViewClient({ quote, viewer }: Props) {
               <button disabled={!!pending} onClick={() => respond("Declined")} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 px-5 py-3 text-xs font-bold text-slate-600 transition hover:border-red-300 hover:bg-red-50 hover:text-red-800 disabled:opacity-60"><XCircle className="h-4 w-4" />{pending === "Declined" ? "Saving…" : "Decline"}</button>
             </div>
           </div>}
+          {viewer === "traveller" && status === "Accepted" && <p className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs leading-5 text-emerald-950 print:hidden">This approval is locked to protect the booking hand-off. Contact your consultant if the proposal must be reopened.</p>}
         </footer>
       </div>
     </div>
