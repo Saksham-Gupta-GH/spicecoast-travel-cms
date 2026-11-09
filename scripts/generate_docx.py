@@ -109,6 +109,21 @@ def add_markdown_table(doc, rows):
     doc.add_paragraph().paragraph_format.space_after = Pt(2)
 
 
+def add_figure(doc, alt_text, relative_path):
+    image_path = ROOT / relative_path
+    if not image_path.exists():
+        raise FileNotFoundError(f"Missing TDD figure: {image_path}")
+    paragraph = doc.add_paragraph()
+    paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    paragraph.paragraph_format.space_before = Pt(4)
+    paragraph.paragraph_format.space_after = Pt(5)
+    paragraph.paragraph_format.keep_with_next = True
+    width = 2.65 if image_path.name == "mobile-package.jpg" else 6.7
+    inline = paragraph.add_run().add_picture(str(image_path), width=Inches(width))
+    inline._inline.docPr.set("descr", alt_text)
+    inline._inline.docPr.set("title", alt_text)
+
+
 def build_document():
     doc = Document()
     section = doc.sections[0]
@@ -157,6 +172,15 @@ def build_document():
             in_code = not in_code
             index += 1
             continue
+        image_match = re.fullmatch(r"!\[([^\]]+)\]\(([^)]+)\)", line.strip())
+        if image_match:
+            add_figure(doc, image_match.group(1), image_match.group(2))
+            index += 1
+            continue
+        if line.strip() == "<!-- PAGE_BREAK -->":
+            doc.add_page_break()
+            index += 1
+            continue
         if in_code:
             paragraph = doc.add_paragraph(style="Architecture Code")
             paragraph.add_run(line or " ")
@@ -189,6 +213,15 @@ def build_document():
             paragraph.paragraph_format.left_indent = Inches(0.28)
             paragraph.paragraph_format.first_line_indent = Inches(-0.2)
             add_inline(paragraph, "•  " + line[2:])
+        elif line.startswith("*Figure ") and line.endswith("*"):
+            paragraph = doc.add_paragraph()
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            paragraph.paragraph_format.space_after = Pt(10)
+            paragraph.paragraph_format.keep_with_next = True
+            run = paragraph.add_run(line[1:-1])
+            run.italic = True
+            run.font.size = Pt(9)
+            run.font.color.rgb = RGBColor(71, 85, 105)
         elif line.strip() == "---":
             pass
         elif line.strip():

@@ -38,48 +38,13 @@ Every item below is an implementation assumption rather than a fact supplied by 
 
 ---
 
+<!-- PAGE_BREAK -->
+
 ## 2 System Architecture and Technology Choices
 
-```
-+---------------------------------------------------------------------------------+
-|                                CLIENT BROWSERS                                  |
-|   (Mobile Travelers, Content Editors, Tour Consultants, Founder-MD)             |
-+---------------------------------------------------------------------------------+
-                                      |
-                           HTTPS / Next.js Proxy
-                                      |
-+---------------------------------------------------------------------------------+
-|                           NEXT.JS 16 APP ROUTER LAYER                           |
-|                                                                                 |
-|  [Server Components (SSR)]         [Client Interactive Islands]                |
-|  * /packages/[slug] (Itineraries)  * EnquiryModal (1-Hr SLA + DPDP Consent)     |
-|  * /blog/[slug] (Package links)    * EnquiriesInboxClient (AI Triage Studio)    |
-|  * /quotes/[id] (Printable Proposal) * PackagesCmsClient (Tariff & Rollback)    |
-+---------------------------------------------------------------------------------+
-                                      |
-+---------------------------------------------------------------------------------+
-|                              API & DOMAIN SERVICES                              |
-|                                                                                 |
-|  /api/packages        /api/enquiries        /api/quotes        /api/blogs       |
-|         |                   |                    |                  |           |
-|         +-------------------+--------------------+------------------+           |
-|                             |                                                   |
-|             +---------------+---------------+                                   |
-|             |  AI TRIAGE & EXTRACTION ENGINE |                                   |
-|             |  * Gemini -> OpenRouter       |                                   |
-|             |  * Local Extraction Fallback |                                   |
-|             |  * DB Pricing & Ranking       |                                   |
-|             +---------------+---------------+                                   |
-|                             |                                                   |
-+---------------------------------------------------------------------------------+
-                                      |
-+---------------------------------------------------------------------------------+
-|                    PERSISTENCE: MANAGED POSTGRESQL (NEON)                      |
-|   * packages               * seasonal_prices       * package_versions           |
-|   * enquiries              * quotes                * blogs                      |
-|   * activity_logs          * users                 * redirects (sample mappings)|
-+---------------------------------------------------------------------------------+
-```
+![System architecture showing users, the Next.js application, security boundary, AI service and Neon PostgreSQL](docs/tdd-assets/architecture.png)
+
+*Figure 1. The application uses one deployable Next.js boundary while keeping AI extraction reviewable and all durable content, pricing and versions in PostgreSQL.*
 
 ### Why Nextjs 16 App Router
 1. **Server-Side Rendering (SSR) for Search & Core Web Vitals:** Tour packages and destination guides require high SEO visibility. Server Components render complete HTML with zero client-side database waterfall; under 2.5 seconds on 4G is the production performance target, not an unverified claim about every free-tier cold start.
@@ -98,50 +63,13 @@ Database connections and schema initialization are lazy: route modules can be co
 
 ---
 
+<!-- PAGE_BREAK -->
+
 ## 3 Data Model and Entity Relationships
 
-```
-+------------------+         1:N         +---------------------+
-|     packages     |-------------------->|   seasonal_prices   |
-+------------------+                     +---------------------+
-| id (PK)          |                     | id (PK)             |
-| slug (Unique)    |                     | package_id (FK)     |
-| title            |                     | season_name         |
-| duration_days    |                     | standard_price_pp   |
-| destination_sum  |                     | deluxe_price_pp     |
-| category         |                     | luxury_price_pp     |
-| hotel_tiers      |                     | gst_percent (5.0)   |
-| status           |                     +---------------------+
-| current_version  |
-+------------------+
-        | 1:N
-        +-------------------------------->+---------------------+
-        |                                 |   itinerary_days    |
-        | 1:N                             +---------------------+
-        +-------------------------------->| package_versions    |
-        |                                 +---------------------+
-        |                                 | snapshot_json       |
-        |                                 | version_number      |
-        |                                 | change_summary      |
-        |                                 +---------------------+
-        |
-        | 1:N (Optional)
-        v
-+------------------+         1:1         +---------------------+
-|    enquiries     |-------------------->|       quotes        |
-+------------------+                     +---------------------+
-| id (PK)          |                     | quote_number (Unique|
-| source           |                     | traveller_name      |
-| traveller_name   |                     | selected_tier       |
-| raw_message      |                     | subtotal_amount     |
-| status           |                     | gst_amount (5%)     |
-| ai_destination   |                     | grand_total         |
-| ai_adults/kids   |                     +---------------------+
-| ai_budget_inr    |
-| ai_draft_reply   |
-| is_human_reviewed|
-+------------------+
-```
+![Relational data model for packages, seasonal prices, itineraries, versions, enquiries and quotes](docs/tdd-assets/data-model.png)
+
+*Figure 2. Package content, tariffs and immutable version snapshots share relational keys; enquiries preserve both the original message and the human-reviewed AI output.*
 
 ### Table Specifications
 * **`packages`**: Stores package identity, destinations JSON array, category (Family, Honeymoon, Luxury, Group), hotel tier descriptions, and current published version.
@@ -159,47 +87,9 @@ Database connections and schema initialization are lazy: route modules can be co
 ### Hybrid, Reviewable Design
 The submitted pipeline uses **Gemini structured extraction with OpenRouter and deterministic local fallbacks**. Direct email addresses and phone numbers are redacted before external inference. Every provider response is schema-validated; provider errors, timeouts or invalid JSON fall through safely. Package scoring remains deterministic and prices are always fetched from PostgreSQL, so external model wording cannot create a tariff.
 
-```
-[Incoming Traveller Lead]
-         |
-         v
-+-------------------------------------------------------+
-| Step 1: Privacy-Redacted Parameter Extraction         |
-| - Gemini -> OpenRouter -> Local deterministic fallback|
-| - Schema validation and provider/model provenance     |
-| - Party Size: Adults & Kids count                     |
-| - Travel Window: Month / Nights                       |
-| - Target Budget (INR): Converts "1.2 lakh" to 120,000 |
-| - Must-Haves: Houseboat, pool villa, temple circuit   |
-+-------------------------------------------------------+
-         |
-         v
-+-------------------------------------------------------+
-| Step 2: Deterministic Database Package Scoring        |
-| - Overlap on requested destinations (+35 pts)         |
-| - Pacing fit (e.g. Family category + Kids) (+25 pts)  |
-| - Houseboat requirement match (+30 pts)               |
-| - Budget feasibility vs Deluxe tariff (+20 pts)       |
-| -> Selects Top 3 Best-Fit Database Packages           |
-+-------------------------------------------------------+
-         |
-         v
-+-------------------------------------------------------+
-| Step 3: Strict Zero-Hallucination Price Injection     |
-| - AI DOES NOT generate pricing numbers.               |
-| - Prices are queried directly from seasonal_prices.   |
-| - Inject Peak (₹32,500) and Monsoon (₹24,900) rates. |
-| - State twin sharing basis and 5% GST inclusion.      |
-+-------------------------------------------------------+
-         |
-         v
-+-------------------------------------------------------+
-| Step 4: Human-in-the-Loop Review & Approval           |
-| - Extracted fields displayed beside original text.    |
-| - Consultant can manually override any parameter.     |
-| - NOTHING is sent until consultant clicks "Approve".  |
-+-------------------------------------------------------+
-```
+![Four-stage AI enquiry workflow from privacy-redacted intake through extraction, deterministic ranking and human review](docs/tdd-assets/ai-pipeline.png)
+
+*Figure 3. External AI is limited to structured extraction. Package ranking, price injection and the final approval decision remain inside the application boundary.*
 
 ### Safety Constraints Enforced
 1. **Prices Come from Database, Never AI:** In accordance with the problem statement (*"prices in drafts come from the package price table, never from the AI"*), pricing numbers in generated draft replies are strictly queried from `seasonal_prices`.
@@ -207,6 +97,8 @@ The submitted pipeline uses **Gemini structured extraction with OpenRouter and d
 3. **DPDP Consent Safeguard:** Every public enquiry form requires explicit opt-in consent for digital follow-up, logged alongside the lead record. This is one safeguard, not a claim of complete legal compliance.
 
 ---
+
+<!-- PAGE_BREAK -->
 
 ## 5 Key Interface and Design Decisions
 
@@ -226,7 +118,29 @@ A tailored design system inspired by Kerala's natural landscapes:
 7. **Branded Printable Quote View (`/quotes/[id]`)**: Demonstration proposal on Company A letterhead with itemized subtotal, assumed 5% GST, twin sharing note, and 1-click browser printing.
 8. **In-House Travel Blog & Package Attribution (`/blog` & `/blog/[slug]`)**: Editorial articles hosted directly on-domain that feature direct booking cards for corresponding tour circuits.
 
+<!-- PAGE_BREAK -->
+
+### Key Screens
+
+![Mobile package page showing the route, duration, consent badge, per-person tariff and Kerala photography](docs/tdd-assets/mobile-package.jpg)
+
+*Figure 4. The mobile package page leads with the emotional travel image while keeping duration, route, twin-sharing price and GST visible before the enquiry action.*
+
+<!-- PAGE_BREAK -->
+
+![Package CMS showing publication status, seasonal prices, version history, preview, duplicate and edit controls](docs/tdd-assets/package-cms.jpg)
+
+*Figure 5. The package studio keeps the four routine editor decisions in one scan: status, route, seasonal tariff and version. Preview, duplicate and edit remain directly accessible without training.*
+
+<!-- PAGE_BREAK -->
+
+![Unified enquiry inbox showing the original traveller message beside editable AI extracted fields and package suggestions](docs/tdd-assets/ai-enquiry-inbox.jpg)
+
+*Figure 6. The two-pane inbox preserves the original message beside editable extraction results, provider provenance, confidence and database-ranked packages so a consultant can correct AI output before approval.*
+
 ---
+
+<!-- PAGE_BREAK -->
 
 ## 6 Testing Quality and Security
 
