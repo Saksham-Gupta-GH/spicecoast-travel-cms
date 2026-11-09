@@ -23,7 +23,8 @@ A unified, server-rendered Next.js 16 application backed by managed PostgreSQL t
 * **Public Booking Portal:** High-impact Kerala visual branding, day-wise itineraries, seasonal tariff matrix (twin sharing + assumed 5% GST), and explicit digital follow-up consent.
 * **5-Minute Package CMS Studio:** In-place seasonal tariff edits, 1-click package duplication, live preview, and snapshot-based version history with 1-click rollback.
 * **Unified Admin Inbox & AI Triage Studio:** Multi-channel aggregation, automatic parameter extraction, top-3 package recommendation, and automated draft replies strictly constrained to database prices (eliminating hallucinations).
-* **Optional Depth — Branded Quote Builder:** Itemized, printable quote view with GST calculation and shareable links. The browser print dialog provides Save as PDF; the server does not generate or email a PDF.
+* **Optional Depth — Private Traveller Proposal Portal:** Itemized, printable quotes are linked to password-protected traveller accounts. Travellers can approve, decline or request changes; the decision persists for the consultant. The browser print dialog provides Save as PDF; the server does not generate or email a PDF.
+* **Optional Depth — Route Maps:** Package and proposal pages render ordered OpenStreetMap circuits without a paid map API.
 
 ### Assumptions Used in the Demonstration
 Every item below is an implementation assumption rather than a fact supplied by the client:
@@ -35,6 +36,7 @@ Every item below is an implementation assumption rather than a fact supplied by 
 * **External channels:** WhatsApp, email, chat and phone ingestion and message delivery are mocked as required by the core-build instructions. Clicking send records an approved reply and timestamp; it does not contact a traveller.
 * **Legacy URLs:** Eight representative redirects are implemented from one shared mapping. The actual list of 140 old URLs was not supplied and must be imported during migration.
 * **Images:** Remote Unsplash images are used as sample editorial assets and are not client-owned production assets.
+* **Maps:** OpenStreetMap tiles and seeded coordinates are demonstration data. Production usage must follow the tile provider policy or use a contracted tile host.
 
 ---
 
@@ -59,11 +61,7 @@ Every item below is an implementation assumption rather than a fact supplied by 
 ### Why Vercel for the Assessment Deployment
 Vercel is the verified Next.js adapter path and supports the App Router, Server Components, route handlers and proxy used in this build. The application does not rely on Vercel's filesystem for durable state. This is an assessment deployment choice, not an assumption that a free tier is appropriate for Company A's production traffic.
 
-Database connections and schema initialization are lazy: route modules can be compiled without opening a connection, while each database-backed request awaits one shared initialization promise before querying. Public catalogue, package, blog, quote and sitemap routes are explicitly dynamic so they are rendered from current PostgreSQL data rather than captured during deployment.
-
----
-
-<!-- PAGE_BREAK -->
+Database connections and schema initialization are lazy: route modules can be compiled without opening a connection, while each database-backed request awaits one shared initialization promise before querying. Public catalogue, package, blog and sitemap routes are explicitly dynamic so they are rendered from current PostgreSQL data rather than captured during deployment. Quote routes are also dynamic but private: signed staff access or matching traveller ownership is required before proposal data is returned.
 
 ## 3 Data Model and Entity Relationships
 
@@ -76,7 +74,8 @@ Database connections and schema initialization are lazy: route modules can be co
 * **`seasonal_prices`**: Stores per-person twin-sharing tariffs across Peak, Regular and Monsoon seasons, plus the demo’s assumed 5% GST rate.
 * **`package_versions`**: Stores deep JSON snapshots of past revisions, author metadata, and change notes to support 1-click rollbacks.
 * **`enquiries`**: Unified lead store supporting Web, WhatsApp, and Email. Houses both raw incoming text and extracted AI attributes.
-* **`quotes`**: Itemized proposals with subtotal, 5% GST calculation, and validity period.
+* **`users`**: Staff identities plus traveller accounts with salted scrypt password hashes for the optional proposal portal.
+* **`quotes`**: Itemized proposals with subtotal, 5% GST calculation, validity period, traveller ownership and persisted response state.
 * **`activity_logs`**: Append-only application audit trail of package edits, pricing changes, and simulated reply dispatches. Database administrators can still alter PostgreSQL records, so “tamper-proof” is not claimed.
 * **`redirects`**: Schema for legacy mappings plus eight representative proxy redirects sourced from one shared mapping. The production migration requires the client’s complete 140-URL export.
 
@@ -96,10 +95,6 @@ The submitted pipeline uses **Gemini structured extraction with OpenRouter and d
 2. **Nothing Sent Without Human Review:** AI drafts remain in `Draft` state inside the admin inbox until Mathew Varghese (Consultant) or Jawahar Kurian (Admin) verifies and clicks **"Approve & Send Tailored Reply"**.
 3. **DPDP Consent Safeguard:** Every public enquiry form requires explicit opt-in consent for digital follow-up, logged alongside the lead record. This is one safeguard, not a claim of complete legal compliance.
 
----
-
-<!-- PAGE_BREAK -->
-
 ## 5 Key Interface and Design Decisions
 
 ### Visual Identity
@@ -111,11 +106,11 @@ A tailored design system inspired by Kerala's natural landscapes:
 ### Screen Breakdown
 1. **Public Landing & Search Portal (`/`)**: High-impact Kerala imagery, business credibility strip (48 staff, ₹32 Cr volume, 1-hour reply SLA), featured packages, and interactive enquiry form with brief sample loader.
 2. **Holiday Packages Catalog (`/packages`)**: Instant client-side filters for Category (Family, Honeymoon, Luxury, Group) and Destination, showing per-person twin-sharing pricing and 5% GST badges.
-3. **Public Package Detail Page (`/packages/[slug]`)**: Server-rendered view with day-wise itinerary accordions, hotel standard comparison, inclusions/exclusions checklist, and seasonal tariff matrix.
+3. **Public Package Detail Page (`/packages/[slug]`)**: Server-rendered view with day-wise itinerary accordions, hotel standard comparison, inclusions/exclusions checklist, seasonal tariff matrix and ordered OpenStreetMap circuit.
 4. **Package CMS Studio (`/admin/packages`)**: Comprehensive management interface allowing 5-minute price edits, 1-click duplicate package creation, live preview, and version rollback.
 5. **Unified Admin Inbox & AI Triage Studio (`/admin/enquiries`)**: Two-pane workspace displaying raw messages side-by-side with editable AI extracted parameters, top 3 suggestions, and editable draft reply.
 6. **Executive ROI Dashboard (`/admin`)**: Business metric tracker demonstrating how reducing response lag from 12 hours to under 60 minutes retains ₹66.82 Lakh in annual margin.
-7. **Branded Printable Quote View (`/quotes/[id]`)**: Demonstration proposal on Company A letterhead with itemized subtotal, assumed 5% GST, twin sharing note, and 1-click browser printing.
+7. **Private Traveller Portal and Quote View (`/traveller`, `/quotes/[id]`)**: Linked proposals on Company A letterhead with itemized subtotal, assumed 5% GST, twin-sharing note, route map, browser printing and persisted approval/change/decline controls. Quote data requires a signed staff session or owning traveller account.
 8. **In-House Travel Blog & Package Attribution (`/blog` & `/blog/[slug]`)**: Editorial articles hosted directly on-domain that feature direct booking cards for corresponding tour circuits.
 
 <!-- PAGE_BREAK -->
@@ -151,13 +146,14 @@ Run via `npm test` using Node's native test runner after configuring `DATABASE_U
 * **Price Integrity Verification:** Ensures generated draft replies contain exact numbers from `seasonal_prices` (e.g. ₹32,500 and ₹24,900) and explicitly mention twin sharing and 5% GST.
 * **Instant Acknowledgment SLA:** Verifies generation of instant branded acknowledgment templates with reference tracking IDs.
 * **Package Versioning & Rollback:** Verifies snapshot generation and historical state restoration.
+* **Traveller and Route Unit Tests:** Database-free tests verify salted password hashing, password rejection and route alias normalization.
 
 ### Security and Privacy Safeguards
 * **No Production Secrets in Repository:** No API keys or production credentials are committed. The documented reviewer accounts and shared demo password are intentionally public test data.
 * **DPDP Act 2023 Consent Enforcement:** Explicit opt-in captured before storing lead contact details.
 * **Public Enquiry Abuse Controls:** Unauthenticated callers are forced to the consented `web_form` source. A hidden honeypot and a PostgreSQL-backed five-request/ten-minute throttle run before any external AI request; only salted request-identity hashes are stored. On Vercel, the coarse throttle trusts the platform-set `x-forwarded-for` header, combines it with the user agent and never treats that identity as an authentication boundary.
 * **Sanitized Inputs:** All PostgreSQL queries use parameter placeholders rather than string interpolation, preventing SQL injection attacks.
-* **Authentication and Access Control:** Staff authenticate through a dedicated sign-in page. The server issues a signed, HTTP-only, same-site session cookie with an eight-hour expiry. The proxy's cookie-presence check is only an early redirect for signed-out users, not the authorization gate; server layouts, pages and APIs validate the signed session and repeat role checks. Admins have full access, editors manage packages/blogs, and consultants manage enquiries/quotes.
+* **Authentication and Access Control:** Staff authenticate through a dedicated sign-in page. Travellers claim an unlinked quote by matching its email and quote number, then use a salted scrypt password. The server issues separate signed, HTTP-only, same-site cookies. The proxy's staff cookie-presence check is only an early redirect, not the authorization gate; server layouts, pages and APIs validate the signed session and repeat role or quote-ownership checks. Admins have full access, editors manage packages/blogs, consultants manage enquiries/quotes, and travellers can view only their linked proposals.
 * **Server Validation:** Public enquiry payloads enforce name, email, message and length constraints, accepted sources, and explicit consent for digital follow-up. PostgreSQL statements are parameterized.
 * **Safe Failure Responses:** Unexpected API details are logged server-side with a request ID; clients receive a generic 500 response instead of database or provider error text.
 
@@ -176,7 +172,8 @@ Run via `npm test` using Node's native test runner after configuring `DATABASE_U
 ### Known Limitations
 * The free Vercel and Neon tiers are appropriate for a non-commercial assessment demo, not the stated 2,400-enquiry-per-month production workload. Production needs paid capacity, backups, observability, retention policies and a data-hosting review under the DPDP Act.
 * Database schema creation and sample seeding run automatically at application startup for reviewer convenience. Production should replace this with an explicit, versioned migration pipeline.
-* The three assessment accounts are a hardcoded demo registry with environment-overridable passwords, not a production identity store. Signed session verification and server-side role checks are real; production should replace the registry with managed identity, password hashing, recovery and revocation.
+* The three staff assessment accounts are a hardcoded demo registry with environment-overridable passwords, not a production identity store. Traveller accounts use database-backed salted password hashes, but production should add verified email invitations, password recovery, session revocation and managed identity controls.
+* Traveller quote claiming uses the email and quote number as a demonstration invitation. Production should send a short-lived, single-use magic link or OTP rather than treating a quote number as an identity-verification factor.
 * External extraction depends on third-party availability and quotas; the local engine preserves the core flow during failures. Direct identifiers are redacted, but a production DPDP review must still assess provider terms, retention, cross-border processing and consent. Low-confidence fields remain editable and nothing is sent without review.
 * Scheduled package status is stored, but a background publication scheduler is not implemented in the core slice.
 * Remote sample images require network access; production should use an approved media library and image ownership checks.

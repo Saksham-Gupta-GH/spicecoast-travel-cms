@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 import { LEGACY_REDIRECTS } from "./legacy-redirects";
+import { hashPassword } from "./passwords";
 
 type QueryParameters = unknown[] | Record<string, unknown>;
 
@@ -90,6 +91,7 @@ async function initializeDatabase() {
       name TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('admin', 'editor', 'consultant', 'traveller')),
+      password_hash TEXT,
       avatar TEXT,
       created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
@@ -219,11 +221,15 @@ async function initializeDatabase() {
       gst_amount INTEGER NOT NULL,
       grand_total INTEGER NOT NULL,
       notes TEXT,
-      status TEXT NOT NULL CHECK(status IN ('Draft', 'Sent', 'Accepted', 'Expired')),
+      status TEXT NOT NULL CHECK(status IN ('Draft', 'Sent', 'Changes Requested', 'Accepted', 'Declined', 'Expired')),
+      traveller_user_id TEXT,
+      traveller_response TEXT,
+      responded_at TIMESTAMPTZ,
       created_by TEXT NOT NULL,
       created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (enquiry_id) REFERENCES enquiries(id) ON DELETE SET NULL,
-      FOREIGN KEY (package_id) REFERENCES packages(id) ON DELETE CASCADE
+      FOREIGN KEY (package_id) REFERENCES packages(id) ON DELETE CASCADE,
+      FOREIGN KEY (traveller_user_id) REFERENCES users(id) ON DELETE SET NULL
     );
 
     -- Blog CMS (Linked directly to packages)
@@ -270,6 +276,14 @@ async function initializeDatabase() {
       request_count INTEGER NOT NULL DEFAULT 0,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+
+    -- Login and registration throttling. Identity values are salted hashes.
+    CREATE TABLE IF NOT EXISTS auth_rate_limits (
+      identity_hash TEXT PRIMARY KEY,
+      window_started_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      request_count INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // Additive migration for deployments created before external AI providers were enabled.
@@ -277,10 +291,23 @@ async function initializeDatabase() {
     ALTER TABLE enquiries ADD COLUMN IF NOT EXISTS ai_provider TEXT DEFAULT 'local';
     ALTER TABLE enquiries ADD COLUMN IF NOT EXISTS ai_model TEXT;
     ALTER TABLE enquiries ADD COLUMN IF NOT EXISTS ai_fallback_reason TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+    ALTER TABLE users ADD CONSTRAINT users_role_check
+      CHECK(role IN ('admin', 'editor', 'consultant', 'traveller'));
+    ALTER TABLE quotes ADD COLUMN IF NOT EXISTS traveller_user_id TEXT;
+    ALTER TABLE quotes ADD COLUMN IF NOT EXISTS traveller_response TEXT;
+    ALTER TABLE quotes ADD COLUMN IF NOT EXISTS responded_at TIMESTAMPTZ;
+    ALTER TABLE quotes DROP CONSTRAINT IF EXISTS quotes_status_check;
+    ALTER TABLE quotes ADD CONSTRAINT quotes_status_check
+      CHECK(status IN ('Draft', 'Sent', 'Changes Requested', 'Accepted', 'Declined', 'Expired'));
+    CREATE INDEX IF NOT EXISTS quotes_traveller_user_idx ON quotes(traveller_user_id);
+    CREATE INDEX IF NOT EXISTS quotes_email_lower_idx ON quotes(LOWER(email));
   `);
 
   await syncLegacyRedirects();
   await seedInitialData();
+  await seedTravellerPortalDemo();
 }
 
 async function syncLegacyRedirects() {
@@ -907,6 +934,32 @@ Explore our curated Munnar itineraries with dedicated chauffeur-driven private v
   });
 
   console.log("Database initialized and seeded successfully!");
+}
+
+async function seedTravellerPortalDemo() {
+  const email = "e.campbell@edinburgh.ac.uk";
+  const existing = await db.prepare(`
+    SELECT id, password_hash FROM users WHERE LOWER(email) = LOWER(?)
+  `).get(email) as { id: string; password_hash: string | null } | undefined;
+  const travellerId = existing?.id ?? "usr_traveller_demo";
+
+  if (!existing) {
+    const passwordHash = await hashPassword(process.env.DEMO_TRAVELLER_PASSWORD ?? "SpiceCoastTraveller!2026");
+    await db.prepare(`
+      INSERT INTO users (id, name, email, role, password_hash)
+      VALUES (?, 'Dr. Evelyn Campbell', ?, 'traveller', ?)
+    `).run(travellerId, email, passwordHash);
+  } else if (!existing.password_hash) {
+    const passwordHash = await hashPassword(process.env.DEMO_TRAVELLER_PASSWORD ?? "SpiceCoastTraveller!2026");
+    await db.prepare(`UPDATE users SET password_hash = ?, role = 'traveller' WHERE id = ?`).run(passwordHash, travellerId);
+  }
+
+  await db.prepare(`
+    UPDATE quotes
+    SET traveller_user_id = ?
+    WHERE LOWER(email) = LOWER('e.campbell@edinburgh.ac.uk')
+      AND traveller_user_id IS NULL
+  `).run(travellerId);
 }
 
 export default db;

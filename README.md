@@ -11,6 +11,8 @@ Live demo: [https://spicecoast-travel-cms.vercel.app](https://spicecoast-travel-
 - Package enquiry forms with explicit digital follow-up consent
 - Unified staff inbox with Gemini extraction, OpenRouter and local fallbacks, deterministic package ranking and editable reply drafts
 - Signed staff sessions with admin, editor and consultant authorization
+- Private traveller accounts for reviewing, approving, declining or requesting changes to linked proposals
+- Free OpenStreetMap route maps on package and proposal pages
 - Seeded sample content, sitemap, representative legacy redirects and printable quote views
 
 ## Run locally
@@ -33,10 +35,16 @@ Reviewer staff accounts:
 
 Password for all demo accounts: `SpiceCoastDemo!2026`
 
+Reviewer traveller account:
+
+- `e.campbell@edinburgh.ac.uk`
+- Password: `SpiceCoastTraveller!2026`
+
 ## Quality checks
 
 ```bash
 npm test
+npm run test:unit
 npm run lint
 npm run build
 ```

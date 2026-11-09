@@ -139,7 +139,7 @@ def build_document():
     normal.font.name = "Aptos"
     normal.font.size = Pt(10.5)
     normal.font.color.rgb = RGBColor(30, 41, 59)
-    normal.paragraph_format.space_after = Pt(6)
+    normal.paragraph_format.space_after = Pt(5)
     normal.paragraph_format.line_spacing = 1.12
 
     for style_name, size, before, after in (("Title", 26, 0, 12), ("Heading 1", 17, 18, 8), ("Heading 2", 12.5, 12, 5)):

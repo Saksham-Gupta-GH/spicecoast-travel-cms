@@ -83,7 +83,7 @@ export function QuotesClient({ initialQuotes, packages, enquiries }: Props) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-emerald-700 mb-1">
-            Quote Builder &amp; PDF Engine
+            Quote Builder &amp; Traveller Responses
           </div>
           <h1 className="text-2xl font-extrabold text-slate-900">
             Client Quotes &amp; Proposals
@@ -129,6 +129,7 @@ export function QuotesClient({ initialQuotes, packages, enquiries }: Props) {
                   <td className="py-4 px-4">
                     <div className="font-bold text-slate-900">{q.traveller_name}</div>
                     <div className="text-[11px] text-slate-500">{q.email}</div>
+                    {q.traveller_response && <div className="mt-1.5 max-w-xs rounded-lg bg-amber-50 px-2 py-1.5 text-[10px] leading-4 text-amber-950">Requested: {q.traveller_response}</div>}
                   </td>
 
                   <td className="py-4 px-4">
@@ -154,7 +155,7 @@ export function QuotesClient({ initialQuotes, packages, enquiries }: Props) {
                       target="_blank"
                       className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition"
                     >
-                      <span>View PDF Quote</span>
+                      <span>Open Proposal</span>
                       <ExternalLink className="w-3 h-3" />
                     </Link>
                   </td>

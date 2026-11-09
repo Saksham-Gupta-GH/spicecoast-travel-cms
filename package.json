@@ -7,19 +7,23 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --env-file=.env.local --test tests/core-logic.test.ts"
+    "test": "tsx --env-file=.env.local --test tests/core-logic.test.ts",
+    "test:unit": "tsx --test tests/traveller-logic.test.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",
+    "leaflet": "^1.9.4",
     "lucide-react": "^1.70.0",
     "next": "16.4.5",
     "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "server-only": "^0.0.1",
     "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.5",
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^20",
     "@types/pg": "^8.23.1",
     "@types/react": "^19",

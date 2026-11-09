@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Compass, Phone, Sparkles, Shield, Menu, X, ArrowRight } from "lucide-react";
+import { Compass, Phone, Sparkles, Shield, Menu, X, ArrowRight, FileCheck2 } from "lucide-react";
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -72,6 +72,9 @@ export function Navbar() {
 
         {/* Actions */}
         <div className="hidden md:flex items-center gap-3">
+          <Link href="/traveller" className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:border-emerald-300 hover:text-emerald-800">
+            <FileCheck2 className="h-4 w-4" /> My quotes
+          </Link>
           <Link
             href="/#enquiry"
             className="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-4 py-2.5 rounded-lg shadow-sm shadow-emerald-700/20 hover:shadow-md transition"
@@ -123,6 +126,13 @@ export function Navbar() {
             className="block text-base font-medium text-slate-800 hover:text-emerald-700 py-1"
           >
             Travel Guides & Blog
+          </Link>
+          <Link
+            href="/traveller"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block rounded-lg border border-emerald-200 bg-emerald-50 p-2.5 text-base font-medium text-emerald-900"
+          >
+            Traveller portal →
           </Link>
           <Link
             href="/admin"

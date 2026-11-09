@@ -17,6 +17,7 @@ import {
   Info,
 } from "lucide-react";
 import { EnquiryModal } from "@/components/EnquiryModal";
+import { RouteMap } from "@/components/RouteMap";
 
 interface Props {
   pkg: any;
@@ -137,6 +138,8 @@ export function PackageDetailClient({ pkg }: Props) {
               {pkg.description}
             </p>
           </div>
+
+          <RouteMap destinations={pkg.destinations} />
 
           {/* Seasonal Pricing Matrix Table (Core Brief Constraint) */}
           <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-5">

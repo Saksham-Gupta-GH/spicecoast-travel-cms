@@ -4,8 +4,10 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 
 export const SESSION_COOKIE = "spicecoast_session";
+export const TRAVELLER_SESSION_COOKIE = "spicecoast_traveller_session";
 export type StaffRole = "admin" | "editor" | "consultant";
 export type StaffSession = { userId: string; name: string; email: string; role: StaffRole; expiresAt: number };
+export type TravellerSession = { userId: string; role: "traveller"; expiresAt: number };
 
 const DEMO_PASSWORD = "SpiceCoastDemo!2026";
 const staffAccounts: Record<string, Omit<StaffSession, "expiresAt"> & { password: string }> = {
@@ -61,4 +63,34 @@ export async function getStaffSession() {
 export async function hasRole(allowedRoles: StaffRole[]) {
   const session = await getStaffSession();
   return session && allowedRoles.includes(session.role) ? session : null;
+}
+
+export function createTravellerSession(userId: string): TravellerSession {
+  return { userId, role: "traveller", expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 };
+}
+
+export function encodeTravellerSession(session: TravellerSession) {
+  const payload = Buffer.from(JSON.stringify(session)).toString("base64url");
+  return `${payload}.${sign(`traveller:${payload}`)}`;
+}
+
+export function decodeTravellerSession(value?: string): TravellerSession | null {
+  if (!value) return null;
+  const [payload, signature] = value.split(".");
+  if (!payload || !signature) return null;
+  const supplied = Buffer.from(signature);
+  const expected = Buffer.from(sign(`traveller:${payload}`));
+  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return null;
+
+  try {
+    const session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as TravellerSession;
+    return session.userId && session.role === "traveller" && session.expiresAt > Date.now() ? session : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getTravellerSession() {
+  const cookieStore = await cookies();
+  return decodeTravellerSession(cookieStore.get(TRAVELLER_SESSION_COOKIE)?.value);
 }

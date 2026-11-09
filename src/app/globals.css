@@ -1,5 +1,6 @@
 /* Pin Tailwind's scan root so Vercel and local builds generate the same utilities. */
 @import "tailwindcss" source("../");
+@import "leaflet/dist/leaflet.css";
 
 @layer base {
   :root {
@@ -15,4 +16,28 @@
     color: var(--foreground);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
+}
+
+.spicecoast-route-marker {
+  background: transparent;
+  border: 0;
+}
+
+.spicecoast-route-marker span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 3px solid white;
+  border-radius: 999px;
+  background: #047857;
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 28%);
+}
+
+.leaflet-container {
+  z-index: 0;
+  font-family: inherit;
 }
